@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Superstar Cricket Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root {
+  --green-dark: #0d2b1a;
+  --green-mid: #1a4a2e;
+  --green-felt: #1e5c38;
+  --green-light: #2d7a50;
+  --gold: #f0c040;
+  --gold-dark: #b8860b;
+  --gold-light: #ffe680;
+  --blue-accent: #4ac0f0;
+  --red-accent: #e84040;
+  --white: #f5f0e8;
+  --gray: #a09080;
+  --rarity-common: #8ab4c8;
+  --rarity-rare: #7ec8e3;
+  --rarity-epic: #c070f0;
+  --rarity-legendary: #f0c040;
+  --card-w: min(300px, 86vw);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--green-dark);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, #1e5c38 0%, #0d2b1a 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px);
+  pointer-events: none;
+}
+
+.page {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+}
+.hidden { display: none !important; }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  background: linear-gradient(135deg, #f0c040 0%, #b8860b 100%);
+  color: #000; border: none; border-radius: 4px;
+  font-family: 'Bebas Neue', cursive; font-size: 22px;
+  letter-spacing: 3px; padding: 14px 20px; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  transition: transform 0.1s; width: 100%;
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-secondary {
+  background: transparent; color: var(--gold);
+  border: 2px solid var(--gold); border-radius: 4px;
+  font-family: 'Bebas Neue', cursive; font-size: 20px;
+  letter-spacing: 3px; padding: 12px 20px; cursor: pointer;
+  transition: background 0.15s; width: 100%;
+}
+.btn-secondary:hover { background: rgba(240,192,64,0.1); }
+.btn-danger {
+  background: transparent; color: var(--red-accent);
+  border: 2px solid var(--red-accent); border-radius: 4px;
+  font-family: 'Bebas Neue', cursive; font-size: 18px;
+  letter-spacing: 2px; padding: 10px 20px; cursor: pointer;
+  width: 100%;
+}
+
+/* ── LANDING ── */
+#page-landing { justify-content: center; padding: 32px 20px; gap: 0; }
+.logo-emblem {
+  width: 100px; height: 100px; margin: 0 auto 16px;
+  background: radial-gradient(circle, #2d7a50 40%, #0d2b1a 100%);
+  border: 3px solid var(--gold); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+  box-shadow: 0 0 24px rgba(240,192,64,0.5);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%,100% { box-shadow: 0 0 24px rgba(240,192,64,0.5); }
+  50% { box-shadow: 0 0 40px rgba(240,192,64,0.9); }
+}
+.logo-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  font-size: clamp(28px,9vw,44px); color: var(--gold);
+  text-shadow: 2px 2px 0 #000; line-height: 1.1;
+  letter-spacing: 2px; text-align: center;
+}
+.logo-sub {
+  font-family: 'Bebas Neue', cursive; font-size: clamp(12px,4vw,17px);
+  color: var(--gold-light); letter-spacing: 6px; margin-top: 4px;
+  opacity: 0.8; text-align: center;
+}
+.logo-area { text-align: center; margin-bottom: 32px; }
+.menu-buttons { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 300px; }
+
+/* ── LOBBY ── */
+#page-lobby { padding: 28px 20px; gap: 18px; justify-content: center; }
+.page-header {
+  font-family: 'Cinzel', serif; font-size: 22px; color: var(--gold);
+  text-align: center; width: 100%; padding-bottom: 12px;
+  border-bottom: 1px solid rgba(240,192,64,0.3);
+}
+.lobby-section {
+  width: 100%; max-width: 340px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.lobby-section-title {
+  font-family: 'Bebas Neue', cursive; font-size: 15px;
+  letter-spacing: 3px; color: var(--gray); text-align: center;
+}
+.input-field {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; padding: 12px 14px;
+  color: var(--white); font-family: 'Rajdhani', sans-serif;
+  font-size: 16px; font-weight: 600; letter-spacing: 1px;
+  width: 100%; outline: none;
+}
+.input-field:focus { border-color: var(--gold); }
+.input-field::placeholder { color: var(--gray); }
+.code-input {
+  text-align: center; font-family: 'Bebas Neue', cursive;
+  font-size: 28px; letter-spacing: 8px; text-transform: uppercase;
+}
+.divider-or {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; letter-spacing: 2px; color: var(--gray);
+  width: 100%; max-width: 340px;
+}
+.divider-or::before, .divider-or::after {
+  content: ''; flex: 1;
+  height: 1px; background: rgba(255,255,255,0.1);
+}
+.error-msg {
+  color: var(--red-accent); font-size: 13px;
+  text-align: center; min-height: 18px;
+  font-weight: 600; letter-spacing: 0.5px;
+}
+
+/* ── WAITING ── */
+#page-waiting { justify-content: center; padding: 32px 20px; gap: 20px; text-align: center; }
+.waiting-spinner {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 4px solid rgba(240,192,64,0.2);
+  border-top-color: var(--gold);
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.waiting-title { font-family: 'Bebas Neue', cursive; font-size: 30px; letter-spacing: 4px; color: var(--gold); }
+.waiting-sub { font-size: 15px; color: var(--gray); }
+.room-code-display {
+  background: rgba(0,0,0,0.4); border: 2px solid var(--gold);
+  border-radius: 10px; padding: 16px 28px; text-align: center;
+}
+.room-code-label { font-size: 11px; letter-spacing: 3px; color: var(--gray); }
+.room-code-value { font-family: 'Bebas Neue', cursive; font-size: 44px; color: var(--gold); letter-spacing: 10px; }
+
+/* ── MATCH ── */
+#page-match { padding: 10px 10px 24px; gap: 8px; align-items: center; }
+.match-header {
+  width: 100%; display: flex;
+  justify-content: space-between; align-items: center;
+  padding: 6px 4px;
+}
+.scoreboard { display: flex; gap: 10px; align-items: center; }
+.score-block { text-align: center; }
+.score-label { font-size: 10px; letter-spacing: 2px; color: var(--gray); }
+.score-num { font-family: 'Bebas Neue', cursive; font-size: 30px; color: var(--gold); line-height: 1; }
+.score-divider { font-family: 'Bebas Neue', cursive; font-size: 26px; color: rgba(255,255,255,0.2); }
+.round-badge {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px; padding: 3px 12px; font-size: 11px;
+  font-weight: 700; letter-spacing: 1px; text-align: center;
+}
+.format-tag {
+  background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.3);
+  color: var(--gold); font-family: 'Bebas Neue', cursive;
+  font-size: 12px; letter-spacing: 3px; padding: 2px 8px; border-radius: 3px;
+  text-align: center; margin-bottom: 2px;
+}
+.cards-area { display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; }
+.card-label {
+  font-family: 'Bebas Neue', cursive; font-size: 11px; letter-spacing: 3px;
+  color: var(--gray); width: var(--card-w); text-align: center; padding-bottom: 2px;
+}
+.card-label.you { color: var(--gold); }
+.instruction-row { font-size: 12px; color: var(--gray); text-align: center; padding: 2px 0; }
+.instruction-row span { color: var(--gold); }
+
+/* ── CRICKET CARD ── */
+.cricket-card {
+  width: var(--card-w); border-radius: 12px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  border: 2px solid var(--gold);
+}
+.cricket-card.rarity-common { border-color: var(--rarity-common); }
+.cricket-card.rarity-rare { border-color: var(--rarity-rare); }
+.cricket-card.rarity-epic { border-color: var(--rarity-epic); box-shadow: 0 8px 28px rgba(192,112,240,0.3); }
+.cricket-card.rarity-legendary { border-color: var(--rarity-legendary); box-shadow: 0 8px 36px rgba(240,192,64,0.4); }
+
+.card-header {
+  background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
+  padding: 8px 10px 6px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.card-player-name { font-family: 'Bebas Neue', cursive; font-size: clamp(16px,5vw,22px); color: var(--white); letter-spacing: 1px; line-height: 1; }
+.card-country-role { font-size: 10px; color: var(--gray); letter-spacing: 1px; margin-top: 2px; }
+.rarity-badge { font-family: 'Bebas Neue', cursive; font-size: 9px; letter-spacing: 2px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+.rarity-badge.rarity-common { background: rgba(138,180,200,0.2); color: var(--rarity-common); border: 1px solid var(--rarity-common); }
+.rarity-badge.rarity-rare { background: rgba(126,200,227,0.2); color: var(--rarity-rare); border: 1px solid var(--rarity-rare); }
+.rarity-badge.rarity-epic { background: rgba(192,112,240,0.2); color: var(--rarity-epic); border: 1px solid var(--rarity-epic); }
+.rarity-badge.rarity-legendary { background: rgba(240,192,64,0.2); color: var(--rarity-legendary); border: 1px solid var(--rarity-legendary); }
+
+.card-avatar {
+  height: 70px;
+  background: linear-gradient(180deg, rgba(30,92,56,0.6) 0%, rgba(13,43,26,0.9) 100%);
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+}
+.card-avatar::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,0.015) 6px, rgba(255,255,255,0.015) 12px);
+}
+.player-silhouette { font-size: 44px; opacity: 0.7; }
+.player-initials { position: absolute; bottom: 4px; right: 8px; font-family: 'Bebas Neue', cursive; font-size: 18px; color: rgba(255,255,255,0.35); letter-spacing: 2px; }
+.country-strip { height: 4px; width: 100%; }
+.card-stats { background: rgba(10,20,14,0.97); padding: 5px 7px; }
+.stat-scroll { overflow-y: auto; max-height: 195px; }
+
+.stat-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 7px; border-radius: 4px; margin-bottom: 3px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer; transition: background 0.1s; width: 100%; text-align: left;
+  font-family: 'Rajdhani', sans-serif;
+}
+.stat-btn:last-child { margin-bottom: 0; }
+.stat-btn:hover:not(.disabled-stat) { background: rgba(240,192,64,0.08); border-color: rgba(240,192,64,0.2); }
+.stat-btn.selected { background: rgba(240,192,64,0.15); border-color: var(--gold); }
+.stat-btn.won { background: rgba(50,200,80,0.18); border-color: #32c850; }
+.stat-btn.lost { background: rgba(232,64,64,0.15); border-color: var(--red-accent); }
+.stat-btn.drawn { background: rgba(100,150,255,0.12); border-color: #6496ff; }
+.stat-btn.disabled-stat { cursor: default; }
+.stat-label { font-size: 11px; color: var(--gray); flex: 1; }
+.stat-value { font-weight: 700; font-size: 13px; color: var(--white); min-width: 52px; text-align: right; }
+.stat-value.highlight { color: var(--gold); }
+
+/* face-down card */
+.card-facedown {
+  width: var(--card-w); height: 180px; border-radius: 12px;
+  background: linear-gradient(135deg, #0d2b1a 0%, #1a4a2e 50%, #0d2b1a 100%);
+  border: 2px solid var(--gold-dark);
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6); position: relative; overflow: hidden;
+}
+.card-facedown::before {
+  content: ''; position: absolute; inset: 8px;
+  border: 1px solid rgba(240,192,64,0.2); border-radius: 8px;
+  background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(240,192,64,0.04) 8px, rgba(240,192,64,0.04) 16px);
+}
+.facedown-icon { font-size: 34px; opacity: 0.4; }
+.facedown-text { font-family: 'Bebas Neue', cursive; font-size: 12px; letter-spacing: 4px; color: rgba(255,255,255,0.2); }
+
+/* waiting-for-opponent pill */
+.waiting-pill {
+  background: rgba(74,192,240,0.1); border: 1px solid rgba(74,192,240,0.3);
+  border-radius: 20px; padding: 6px 18px;
+  font-family: 'Bebas Neue', cursive; font-size: 13px;
+  letter-spacing: 3px; color: var(--blue-accent);
+  display: flex; align-items: center; gap: 8px;
+}
+.waiting-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue-accent); animation: blink 1s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── RESULT OVERLAY ── */
+#result-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.result-popup {
+  background: linear-gradient(160deg, #1a4a2e 0%, #0d2b1a 100%);
+  border: 2px solid var(--gold); border-radius: 16px;
+  padding: 24px 28px; text-align: center; max-width: 280px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  animation: pop-in 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes pop-in { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+.result-label { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 4px; margin-bottom: 6px; }
+.result-label.win { color: #32c850; text-shadow: 0 0 20px rgba(50,200,80,0.5); }
+.result-label.lose { color: var(--red-accent); }
+.result-label.draw { color: var(--blue-accent); }
+.result-detail { font-size: 13px; color: var(--gray); margin-bottom: 18px; line-height: 1.5; }
+.btn-next {
+  background: linear-gradient(135deg, #f0c040 0%, #b8860b 100%);
+  color: #000; border: none; border-radius: 4px;
+  font-family: 'Bebas Neue', cursive; font-size: 20px;
+  letter-spacing: 3px; padding: 12px 28px; cursor: pointer; width: 100%;
+}
+.waiting-next { font-family: 'Bebas Neue', cursive; font-size: 14px; letter-spacing: 2px; color: var(--gray); margin-top: 10px; }
+
+/* ── FINAL ── */
+#page-final { padding: 32px 20px; gap: 20px; justify-content: center; align-items: center; }
+.final-trophy { font-size: 72px; text-align: center; animation: bounce 0.6s ease-in-out 0.3s both; }
+@keyframes bounce { from{transform:translateY(-30px);opacity:0} to{transform:translateY(0);opacity:1} }
+.final-result-text { font-family: 'Cinzel', serif; font-size: clamp(22px,7vw,30px); text-align: center; font-weight: 900; }
+.final-result-text.win { color: #32c850; }
+.final-result-text.lose { color: var(--red-accent); }
+.final-result-text.draw { color: var(--blue-accent); }
+.final-scores {
+  display: flex; gap: 20px; background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px 28px;
+}
+.final-score-block { text-align: center; }
+.final-score-name { font-size: 11px; letter-spacing: 2px; color: var(--gray); text-transform: uppercase; }
+.final-score-num { font-family: 'Bebas Neue', cursive; font-size: 52px; color: var(--gold); line-height: 1; }
+.final-score-sep { font-family: 'Bebas Neue', cursive; font-size: 38px; color: rgba(255,255,255,0.2); align-self: center; }
+.final-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px; }
+.rematch-notice { font-size: 13px; color: var(--gray); text-align: center; }
+
+/* ── DISCONNECT OVERLAY ── */
+#disconnect-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+}
+.disconnect-popup {
+  background: linear-gradient(160deg, #2b1a1a 0%, #1a0d0d 100%);
+  border: 2px solid var(--red-accent); border-radius: 16px;
+  padding: 28px; text-align: center; max-width: 280px; width: 90%;
+  animation: pop-in 0.3s ease;
+}
+.dc-icon { font-size: 52px; margin-bottom: 12px; }
+.dc-title { font-family: 'Bebas Neue', cursive; font-size: 26px; letter-spacing: 3px; color: var(--red-accent); margin-bottom: 8px; }
+.dc-text { font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.5; }
+
+/* country strips */
+.country-India { background: linear-gradient(90deg,#FF9933 33%,#fff 33%,#fff 66%,#138808 66%); }
+.country-Australia { background: #FFD700; }
+.country-England { background: linear-gradient(90deg,#CF142B 33%,#FFF 33%,#FFF 66%,#CF142B 66%); }
+.country-South-Africa { background: linear-gradient(90deg,#007749,#FFB81C,#007A4D); }
+.country-New-Zealand { background: #000; }
+.country-West-Indies { background: linear-gradient(90deg,#FFD700 50%,#8B0000 50%); }
+.country-Pakistan { background: linear-gradient(90deg,#01411C 80%,white 80%); }
+.country-Sri-Lanka { background: linear-gradient(90deg,#8D153A 33%,#F5A800 33%,#F5A800 66%,#00534F 66%); }
+.country-Bangladesh { background: linear-gradient(90deg,#006A4E 55%,#F42A41 55%); }
+.country-Afghanistan { background: linear-gradient(90deg,#000 33%,#D32011 33%,#D32011 66%,#009A44 66%); }
+
+/* card reveal anim */
+@keyframes card-reveal { from{opacity:0;transform:rotateY(90deg) scale(0.9)} to{opacity:1;transform:rotateY(0deg) scale(1)} }
+.card-revealed { animation: card-reveal 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ LANDING ══════════════════ -->
+<div id="page-landing" class="page">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:0;">
+    <div class="logo-area">
+      <div class="logo-emblem">🏏</div>
+      <div class="logo-title">Superstar<br>Cricket Cards</div>
+      <div class="logo-sub">Multiplayer Trump Card Game</div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn-primary" onclick="showLobby()">▶ PLAY ONLINE</button>
+      <button class="btn-secondary" onclick="showRules()">📋 RULES</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ RULES ══════════════════ -->
+<div id="page-rules" class="page hidden" style="padding:24px 20px;max-width:500px;margin:0 auto;gap:14px;">
+  <div class="page-header" style="padding-top:20px;">📋 HOW TO PLAY</div>
+  <ul style="list-style:none;width:100%;">
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>🏏</span><div>Create a room or join with a code, or use <strong style="color:var(--gold)">Quick Match</strong> to find a random opponent.</div></li>
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>🃏</span><div>Both players receive <strong style="color:var(--gold)">10 cards</strong>. You see your cards; your opponent's are hidden.</div></li>
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>👆</span><div><strong style="color:var(--gold)">Player 1 picks a stat</strong> each round. Player 2 waits to see which stat was chosen.</div></li>
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>⬆️</span><div><strong style="color:var(--gold)">Higher is better</strong> for Runs, Wickets, 6s, 100s, Strike Rate, Catches etc.</div></li>
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>⬇️</span><div><strong style="color:var(--gold)">Lower is better</strong> for Economy Rate.</div></li>
+    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
+      <span>🎳</span><div><strong style="color:var(--gold)">Best Bowling</strong>: More wickets wins. Equal wickets → fewer runs wins.</div></li>
+    <li style="padding:9px 0;font-size:14px;display:flex;gap:10px;">
+      <span>🏆</span><div>Most points after <strong style="color:var(--gold)">10 rounds</strong> wins the match!</div></li>
+  </ul>
+  <button class="btn-secondary" style="max-width:280px;width:calc(100% - 0px);" onclick="showLanding()">← BACK</button>
+</div>
+
+<!-- ══════════════════ LOBBY ══════════════════ -->
+<div id="page-lobby" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:28px 20px;gap:16px;width:100%;">
+    <div class="page-header">JOIN OR CREATE</div>
+
+    <!-- Name input (shared) -->
+    <div class="lobby-section" style="max-width:340px;">
+      <div class="lobby-section-title">YOUR NAME</div>
+      <input class="input-field" id="player-name-input" placeholder="Enter your name" maxlength="20">
+    </div>
+
+    <!-- Quick Match -->
+    <div class="lobby-section" style="max-width:340px;">
+      <div class="lobby-section-title">⚡ QUICK MATCH</div>
+      <button class="btn-primary" onclick="joinMatchmaking()">FIND OPPONENT</button>
+    </div>
+
+    <div class="divider-or">OR</div>
+
+    <!-- Create Room -->
+    <div class="lobby-section" style="max-width:340px;">
+      <div class="lobby-section-title">🏠 CREATE PRIVATE ROOM</div>
+      <button class="btn-primary" onclick="createRoom()">CREATE ROOM</button>
+    </div>
+
+    <div class="divider-or">OR</div>
+
+    <!-- Join Room -->
+    <div class="lobby-section" style="max-width:340px;">
+      <div class="lobby-section-title">🔑 JOIN WITH CODE</div>
+      <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4">
+      <button class="btn-primary" onclick="joinRoom()">JOIN ROOM</button>
+    </div>
+
+    <div class="error-msg" id="lobby-error"></div>
+    <button class="btn-secondary" style="max-width:340px;" onclick="showLanding()">← BACK</button>
+  </div>
+</div>
+
+<!-- ══════════════════ WAITING ══════════════════ -->
+<div id="page-waiting" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:22px;text-align:center;">
+    <div class="waiting-spinner"></div>
+    <div class="waiting-title" id="waiting-title">FINDING OPPONENT…</div>
+    <div class="waiting-sub" id="waiting-sub">Looking for another player</div>
+    <div class="room-code-display hidden" id="waiting-code-box">
+      <div class="room-code-label">SHARE THIS CODE</div>
+      <div class="room-code-value" id="waiting-code">----</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px;">Ask your friend to enter this code</div>
+    </div>
+    <button class="btn-danger" style="max-width:280px;" onclick="cancelWaiting()">CANCEL</button>
+  </div>
+</div>
+
+<!-- ══════════════════ MATCH ══════════════════ -->
+<div id="page-match" class="page hidden">
+  <div class="match-header">
+    <div class="scoreboard">
+      <div class="score-block">
+        <div class="score-label" id="my-name-label">YOU</div>
+        <div class="score-num" id="score-me">0</div>
+      </div>
+      <div class="score-divider">:</div>
+      <div class="score-block">
+        <div class="score-label" id="opp-name-label">OPP</div>
+        <div class="score-num" id="score-opp">0</div>
+      </div>
+    </div>
+    <div>
+      <div class="format-tag" id="match-format-tag">ODI</div>
+      <div class="round-badge" id="round-badge">Round 1/10</div>
+    </div>
+  </div>
+
+  <div class="instruction-row" id="instruction-row">Waiting for game to start…</div>
+
+  <div class="cards-area">
+    <div class="card-label" id="opp-card-label">⚔ OPPONENT</div>
+    <div id="opp-card-area"></div>
+    <div class="card-label you" id="my-card-label">★ YOUR CARD</div>
+    <div id="my-card-area"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ FINAL ══════════════════ -->
+<div id="page-final" class="page hidden">
+  <div class="final-trophy" id="final-trophy">🏆</div>
+  <div class="final-result-text" id="final-result-text">YOU WON!</div>
+  <div class="final-scores">
+    <div class="final-score-block">
+      <div class="final-score-name" id="final-my-name">YOU</div>
+      <div class="final-score-num" id="final-score-me">0</div>
+    </div>
+    <div class="final-score-sep">–</div>
+    <div class="final-score-block">
+      <div class="final-score-name" id="final-opp-name">OPP</div>
+      <div class="final-score-num" id="final-score-opp">0</div>
+    </div>
+  </div>
+  <div class="rematch-notice hidden" id="rematch-notice">⏳ Opponent wants a rematch!</div>
+  <div class="final-buttons">
+    <button class="btn-primary" id="btn-rematch" onclick="requestRematch()">🔄 REMATCH</button>
+    <button class="btn-secondary" onclick="showLobby()">🏠 BACK TO LOBBY</button>
+  </div>
+</div>
+
+<!-- ══════════════════ OVERLAYS ══════════════════ -->
+<div id="result-overlay" class="hidden">
+  <div class="result-popup">
+    <div class="result-label" id="result-label">WIN</div>
+    <div class="result-detail" id="result-detail"></div>
+    <button class="btn-next" id="result-next-btn" onclick="ackNext()">NEXT ROUND ▶</button>
+    <div class="waiting-next hidden" id="waiting-next-msg">⏳ Waiting for opponent…</div>
+  </div>
+</div>
+
+<div id="disconnect-overlay" class="hidden">
+  <div class="disconnect-popup">
+    <div class="dc-icon">📡</div>
+    <div class="dc-title">OPPONENT LEFT</div>
+    <div class="dc-text" id="dc-text">Your opponent disconnected.<br>You win by default!</div>
+    <button class="btn-next" onclick="showLobby()">BACK TO LOBBY</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STAT CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+const STAT_CONFIG = [
+  { key: 'matches',      label: 'Matches',       lowerBetter: false },
+  { key: 'runs',         label: 'Runs',          lowerBetter: false },
+  { key: 'fours',        label: '4s',            lowerBetter: false },
+  { key: 'sixes',        label: '6s',            lowerBetter: false },
+  { key: 'fifties',      label: '50s',           lowerBetter: false },
+  { key: 'hundreds',     label: '100s',          lowerBetter: false },
+  { key: 'highestScore', label: 'Highest Score', lowerBetter: false },
+  { key: 'strikeRate',   label: 'Strike Rate',   lowerBetter: false },
+  { key: 'bestBowling',  label: 'Best Bowling',  special: true },
+  { key: 'economyRate',  label: 'Economy Rate',  lowerBetter: true  },
+  { key: 'wickets',      label: 'Wickets',       lowerBetter: false },
+  { key: 'catches',      label: 'Catches',       lowerBetter: false },
+  { key: 'stumpings',    label: 'Stumpings',     lowerBetter: false },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLIENT STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const STATE = {
+  myName: '',
+  opponentName: '',
+  myIndex: 0,         // 0 = p1 (picks), 1 = p2 (waits)
+  myHand: [],
+  round: 0,
+  totalRounds: 10,
+  myCard: null,
+  oppCard: null,      // revealed after pick
+  myScore: 0,
+  oppScore: 0,
+  canPick: false,
+  ackedNext: false,
+  format: 'ODI',
+  inGame: false,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOCKET SETUP
+// ═══════════════════════════════════════════════════════════════════════════════
+const socket = io();
+
+socket.on('connect', () => console.log('Connected:', socket.id));
+socket.on('disconnect', () => {
+  if (STATE.inGame) showDisconnectOverlay('You lost connection to the server.');
+});
+
+// Room events
+socket.on('room:created', ({ code }) => {
+  showWaiting(code);
+});
+socket.on('room:ready', ({ opponentName, code }) => {
+  // Both players in room — game starting
+});
+socket.on('room:error', ({ message }) => {
+  setLobbyError(message);
+  showLobby();
+});
+
+// Matchmaking
+socket.on('matchmaking:waiting', () => {
+  showWaiting(null); // no code for matchmaking
+});
+socket.on('matchmaking:matched', ({ opponentName, code }) => {
+  // game:start will arrive shortly
+});
+socket.on('matchmaking:cancelled', () => {
+  showLobby();
+});
+
+// Game lifecycle
+socket.on('game:start', ({ yourHand, opponentName, yourIndex, totalRounds, format }) => {
+  STATE.myHand       = yourHand;
+  STATE.opponentName = opponentName;
+  STATE.myIndex      = yourIndex;
+  STATE.totalRounds  = totalRounds;
+  STATE.format       = format;
+  STATE.myScore      = 0;
+  STATE.oppScore     = 0;
+  STATE.inGame       = true;
+  document.getElementById('my-name-label').textContent  = STATE.myName || 'YOU';
+  document.getElementById('opp-name-label').textContent = opponentName;
+  document.getElementById('final-my-name').textContent  = STATE.myName || 'YOU';
+  document.getElementById('final-opp-name').textContent = opponentName;
+  document.getElementById('match-format-tag').textContent = format;
+  showPage('page-match');
+});
+
+socket.on('round:start', ({ round, yourCard, canPick }) => {
+  STATE.round   = round;
+  STATE.myCard  = yourCard;
+  STATE.oppCard = null;
+  STATE.canPick = canPick;
+  STATE.ackedNext = false;
+  document.getElementById('result-overlay').classList.add('hidden');
+  renderRound();
+});
+
+socket.on('round:result', ({ statKey, p1Card, p2Card, winner, scores, isLastRound, youAre }) => {
+  // Determine which card is mine / opponent's
+  const myCard  = youAre === 'p1' ? p1Card : p2Card;
+  const oppCard = youAre === 'p1' ? p2Card : p1Card;
+  const iWon    = (winner === youAre);
+  const isDraw  = (winner === 'draw');
+
+  STATE.oppCard = oppCard;
+  STATE.myScore  = youAre === 'p1' ? scores.p1 : scores.p2;
+  STATE.oppScore = youAre === 'p1' ? scores.p2 : scores.p1;
+
+  document.getElementById('score-me').textContent  = STATE.myScore;
+  document.getElementById('score-opp').textContent = STATE.oppScore;
+
+  // Reveal opponent card
+  const oppArea = document.getElementById('opp-card-area');
+  const resultCtx = { winner: iWon ? 'player' : (isDraw ? 'draw' : 'ai') };
+  oppArea.innerHTML = renderCard(oppCard, { isPlayer: false, selectedStat: statKey, revealResult: resultCtx, clickable: false });
+  oppArea.firstElementChild.classList.add('card-revealed');
+
+  // Update my card
+  const myArea = document.getElementById('my-card-area');
+  myArea.innerHTML = renderCard(myCard, { isPlayer: true, selectedStat: statKey, revealResult: resultCtx, clickable: false });
+
+  showRoundResultOverlay({ iWon, isDraw, statKey, myCard, oppCard, isLastRound });
+});
+
+socket.on('game:over', ({ reason, scores, matchWinner, p1Name, p2Name, youAre }) => {
+  STATE.inGame = false;
+  if (reason === 'disconnect') return; // handled by opponentDisconnected
+  const iWon  = (matchWinner === youAre);
+  const isDraw = (matchWinner === 'draw');
+  showFinalResult(iWon, isDraw, scores, youAre);
+});
+
+socket.on('game:opponentDisconnected', ({ opponentName }) => {
+  STATE.inGame = false;
+  showDisconnectOverlay(`${opponentName} disconnected.\nYou win by default!`);
+});
+
+socket.on('game:opponentWantsRematch', () => {
+  document.getElementById('rematch-notice').classList.remove('hidden');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function showLanding() { STATE.inGame = false; showPage('page-landing'); }
+function showRules()   { showPage('page-rules'); }
+function showLobby() {
+  document.getElementById('disconnect-overlay').classList.add('hidden');
+  document.getElementById('result-overlay').classList.add('hidden');
+  setLobbyError('');
+  showPage('page-lobby');
+}
+function showWaiting(code) {
+  showPage('page-waiting');
+  if (code) {
+    document.getElementById('waiting-title').textContent = 'WAITING FOR OPPONENT…';
+    document.getElementById('waiting-sub').textContent = 'Share the room code below';
+    document.getElementById('waiting-code').textContent = code;
+    document.getElementById('waiting-code-box').classList.remove('hidden');
+  } else {
+    document.getElementById('waiting-title').textContent = 'FINDING OPPONENT…';
+    document.getElementById('waiting-sub').textContent = 'Looking for another player';
+    document.getElementById('waiting-code-box').classList.add('hidden');
+  }
+}
+function showDisconnectOverlay(msg) {
+  document.getElementById('dc-text').textContent = msg;
+  document.getElementById('disconnect-overlay').classList.remove('hidden');
+}
+function setLobbyError(msg) {
+  document.getElementById('lobby-error').textContent = msg;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOBBY ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+function getPlayerName() {
+  const name = document.getElementById('player-name-input').value.trim();
+  if (!name) {
+    setLobbyError('Please enter your name first.');
+    return null;
+  }
+  STATE.myName = name;
+  document.getElementById('my-name-label').textContent = name;
+  return name;
+}
+
+function createRoom() {
+  const name = getPlayerName(); if (!name) return;
+  socket.emit('room:create', { playerName: name, format: 'ODI' });
+}
+
+function joinRoom() {
+  const name = getPlayerName(); if (!name) return;
+  const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (code.length !== 4) { setLobbyError('Enter a 4-character room code.'); return; }
+  setLobbyError('');
+  socket.emit('room:join', { playerName: name, code });
+}
+
+function joinMatchmaking() {
+  const name = getPlayerName(); if (!name) return;
+  socket.emit('matchmaking:join', { playerName: name, format: 'ODI' });
+}
+
+function cancelWaiting() {
+  socket.emit('matchmaking:cancel');
+  showLobby();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROUND RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderRound() {
+  const r = STATE.round;
+  document.getElementById('score-me').textContent  = STATE.myScore;
+  document.getElementById('score-opp').textContent = STATE.oppScore;
+  document.getElementById('round-badge').textContent = `Round ${r+1}/${STATE.totalRounds}`;
+
+  const isP1    = STATE.myIndex === 0;
+  const canPick = STATE.canPick;
+
+  // Instruction
+  const inst = document.getElementById('instruction-row');
+  if (canPick) {
+    inst.innerHTML = `<span>Your turn!</span> Tap a stat to challenge.`;
+  } else {
+    inst.innerHTML = `Waiting for <span>${STATE.opponentName}</span> to pick a stat…`;
+  }
+
+  // My card
+  const myArea = document.getElementById('my-card-area');
+  myArea.innerHTML = renderCard(STATE.myCard, { isPlayer: true, clickable: canPick });
+
+  // Opponent card — face down until revealed
+  const oppArea = document.getElementById('opp-card-area');
+  oppArea.innerHTML = `
+    <div class="card-facedown">
+      <div class="facedown-icon">🂠</div>
+      <div class="facedown-text">FACE DOWN</div>
+    </div>`;
+
+  // Labels
+  document.getElementById('opp-card-label').textContent = `⚔ ${STATE.opponentName}`;
+  document.getElementById('my-card-label').textContent  = isP1
+    ? `★ YOUR CARD ${canPick ? '— PICK A STAT' : ''}`
+    : `★ YOUR CARD`;
+
+  if (!canPick) {
+    // Show pulsing waiting pill
+    const pill = document.createElement('div');
+    pill.className = 'waiting-pill';
+    pill.innerHTML = `<div class="waiting-dot"></div> WAITING FOR ${STATE.opponentName.toUpperCase()}`;
+    pill.style.marginTop = '4px';
+    myArea.appendChild(pill);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STAT SELECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+function selectStat(statKey) {
+  if (!STATE.canPick) return;
+  STATE.canPick = false;
+  socket.emit('round:pick', { statKey });
+
+  // Update instruction
+  document.getElementById('instruction-row').innerHTML = `Stat chosen! Waiting for reveal…`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROUND RESULT OVERLAY
+// ═══════════════════════════════════════════════════════════════════════════════
+function showRoundResultOverlay({ iWon, isDraw, statKey, myCard, oppCard, isLastRound }) {
+  const label  = document.getElementById('result-label');
+  const detail = document.getElementById('result-detail');
+  const nextBtn = document.getElementById('result-next-btn');
+  const waitMsg = document.getElementById('waiting-next-msg');
+
+  const sc   = STAT_CONFIG.find(s => s.key === statKey);
+  const myV  = displayStatValue(myCard, statKey);
+  const oppV = displayStatValue(oppCard, statKey);
+
+  waitMsg.classList.add('hidden');
+  nextBtn.classList.remove('hidden');
+  STATE.ackedNext = false;
+
+  if (isLastRound) {
+    nextBtn.textContent = '🏁 SEE FINAL RESULT';
+  } else {
+    nextBtn.textContent = 'NEXT ROUND ▶';
+  }
+
+  const detailHtml = `${sc.label}: <strong style="color:var(--gold)">${myV}</strong> vs <strong style="color:var(--blue-accent)">${oppV}</strong>`;
+
+  if (isDraw) {
+    label.textContent = 'DRAW!';
+    label.className   = 'result-label draw';
+    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">No point awarded.</small>`;
+  } else if (iWon) {
+    label.textContent = 'ROUND WON!';
+    label.className   = 'result-label win';
+    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">You take the point!</small>`;
+  } else {
+    label.textContent = 'ROUND LOST';
+    label.className   = 'result-label lose';
+    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">Opponent takes the point.</small>`;
+  }
+
+  document.getElementById('result-overlay').classList.remove('hidden');
+}
+
+function ackNext() {
+  if (STATE.ackedNext) return;
+  STATE.ackedNext = true;
+  document.getElementById('result-next-btn').classList.add('hidden');
+  document.getElementById('waiting-next-msg').classList.remove('hidden');
+  socket.emit('round:next');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FINAL RESULT
+// ═══════════════════════════════════════════════════════════════════════════════
+function showFinalResult(iWon, isDraw, scores, youAre) {
+  document.getElementById('result-overlay').classList.add('hidden');
+  document.getElementById('final-score-me').textContent  = youAre === 'p1' ? scores.p1 : scores.p2;
+  document.getElementById('final-score-opp').textContent = youAre === 'p1' ? scores.p2 : scores.p1;
+  document.getElementById('rematch-notice').classList.add('hidden');
+
+  const trophy = document.getElementById('final-trophy');
+  const text   = document.getElementById('final-result-text');
+
+  if (isDraw) {
+    trophy.textContent = '🤝';
+    text.textContent   = 'MATCH DRAWN!';
+    text.className     = 'final-result-text draw';
+  } else if (iWon) {
+    trophy.textContent = '🏆';
+    text.textContent   = 'YOU WON THE MATCH!';
+    text.className     = 'final-result-text win';
+  } else {
+    trophy.textContent = '😞';
+    text.textContent   = 'OPPONENT WON!';
+    text.className     = 'final-result-text lose';
+  }
+
+  showPage('page-final');
+}
+
+function requestRematch() {
+  socket.emit('game:playAgain');
+  document.getElementById('btn-rematch').textContent = '⏳ WAITING…';
+  document.getElementById('btn-rematch').disabled = true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CARD RENDERER
+// ═══════════════════════════════════════════════════════════════════════════════
+function displayStatValue(card, statKey) {
+  if (statKey === 'bestBowling') {
+    if (!card.bestBowlingWickets && !card.bestBowlingRuns) return '—';
+    return `${card.bestBowlingWickets}/${card.bestBowlingRuns}`;
+  }
+  const v = card[statKey];
+  return (v === undefined || v === null) ? '—' : v;
+}
+
+function countryClass(country) {
+  return 'country-' + (country || '').replace(/ /g, '-');
+}
+
+function renderCard(card, { isPlayer = true, selectedStat = null, revealResult = null, clickable = true } = {}) {
+  if (!card) return '';
+  const initials   = card.name.split(' ').map(w => w[0]).join('').substring(0, 3);
+  const rarityClass = 'rarity-' + card.rarity.toLowerCase();
+
+  let statsHtml = '';
+  STAT_CONFIG.forEach(sc => {
+    const val = displayStatValue(card, sc.key);
+    let extraClass = '';
+    if (selectedStat === sc.key) extraClass += ' selected';
+    if (revealResult && selectedStat === sc.key) {
+      const w = revealResult.winner;
+      if (isPlayer) {
+        if (w === 'player') extraClass += ' won';
+        else if (w === 'draw') extraClass += ' drawn';
+        else extraClass += ' lost';
+      } else {
+        if (w === 'ai') extraClass += ' won';
+        else if (w === 'draw') extraClass += ' drawn';
+        else extraClass += ' lost';
+      }
+    }
+    const clickAttr   = (isPlayer && clickable) ? `onclick="selectStat('${sc.key}')"` : '';
+    const disabledCls = (!isPlayer || !clickable) ? ' disabled-stat' : '';
+
+    statsHtml += `
+      <button class="stat-btn${extraClass}${disabledCls}" ${clickAttr}>
+        <span class="stat-label">${sc.label}</span>
+        <span class="stat-value${selectedStat === sc.key ? ' highlight' : ''}">${val}</span>
+      </button>`;
+  });
+
+  return `
+    <div class="cricket-card ${rarityClass}">
+      <div class="card-header">
+        <div>
+          <div class="card-player-name">${card.name}</div>
+          <div class="card-country-role">${card.country} · ${card.role}</div>
+        </div>
+        <div class="rarity-badge ${rarityClass}">${card.rarity.toUpperCase()}</div>
+      </div>
+      <div class="card-avatar">
+        <div class="player-silhouette">🏏</div>
+        <div class="player-initials">${initials}</div>
+      </div>
+      <div class="country-strip ${countryClass(card.country)}"></div>
+      <div class="card-stats">
+        <div class="stat-scroll">${statsHtml}</div>
+      </div>
+    </div>`;
+}
+
+// Boot
+showLanding();
+</script>
+</body>
+</html>
