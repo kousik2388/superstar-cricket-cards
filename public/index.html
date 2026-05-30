@@ -3,969 +3,2538 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards</title>
+<title>Superstar Trumpcard V11 — IPL_100Players CoinToss RoleFilter</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
-:root {
-  --green-dark: #0d2b1a;
-  --green-mid: #1a4a2e;
-  --green-felt: #1e5c38;
-  --green-light: #2d7a50;
-  --gold: #f0c040;
-  --gold-dark: #b8860b;
-  --gold-light: #ffe680;
-  --blue-accent: #4ac0f0;
-  --red-accent: #e84040;
-  --white: #f5f0e8;
-  --gray: #a09080;
-  --rarity-common: #8ab4c8;
-  --rarity-rare: #7ec8e3;
-  --rarity-epic: #c070f0;
-  --rarity-legendary: #f0c040;
-  --card-w: min(300px, 86vw);
+:root{
+  --green-dark:#0d2b1a;--green-mid:#1a4a2e;--gold:#f0c040;--gold-dark:#b8860b;--gold-light:#ffe680;
+  --blue:#4ac0f0;--red:#e84040;--green-win:#32c850;--white:#f5f0e8;--gray:#a09080;
+  --rc:#8ab4c8;--rr:#7ec8e3;--re:#c070f0;--rl:#f0c040;
+  --card-w:min(300px,86vw);
 }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Rajdhani',sans-serif;background:var(--green-dark);color:var(--white);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 30%,#1e5c38 0%,#0d2b1a 70%),
+  repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.02) 40px),
+  repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.02) 40px);
+  pointer-events:none}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.hidden{display:none!important}
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* BUTTONS */
+.btn-primary{background:linear-gradient(135deg,#f0c040,#b8860b);color:#000;border:none;border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:3px;padding:14px 20px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .1s;width:100%}
+.btn-primary:active{transform:scale(.97)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:transparent;color:var(--gold);border:2px solid var(--gold);border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:3px;padding:12px 20px;cursor:pointer;
+  transition:background .15s;width:100%}
+.btn-secondary:hover{background:rgba(240,192,64,.1)}
+.btn-green{background:linear-gradient(135deg,#1e8c4a,#0d5c2e);color:var(--white);border:none;border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:3px;padding:14px 20px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .1s;width:100%}
+.btn-green:active{transform:scale(.97)}
+.btn-danger{background:transparent;color:var(--red);border:2px solid var(--red);border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;padding:10px 20px;cursor:pointer;width:100%}
 
-body {
-  font-family: 'Rajdhani', sans-serif;
-  background: var(--green-dark);
-  color: var(--white);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+/* LANDING */
+#page-landing{justify-content:center;padding:32px 20px}
+.logo-emblem{width:100px;height:100px;margin:0 auto 16px;
+  background:radial-gradient(circle,#2d7a50 40%,#0d2b1a 100%);
+  border:3px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:52px;box-shadow:0 0 24px rgba(240,192,64,.5);animation:pulse-glow 3s ease-in-out infinite}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 24px rgba(240,192,64,.5)}50%{box-shadow:0 0 40px rgba(240,192,64,.9)}}
+.logo-title{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(28px,9vw,44px);color:var(--gold);
+  text-shadow:2px 2px 0 #000;line-height:1.1;letter-spacing:2px;text-align:center}
+.logo-sub{font-family:'Bebas Neue',cursive;font-size:clamp(12px,4vw,17px);color:var(--gold-light);
+  letter-spacing:6px;margin-top:4px;opacity:.8;text-align:center}
+.logo-area{text-align:center;margin-bottom:32px}
+.menu-buttons{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px}
+.menu-label{font-size:11px;letter-spacing:3px;color:var(--gray);text-align:center;margin-bottom:-4px}
 
-body::before {
-  content: '';
-  position: fixed; inset: 0; z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 30%, #1e5c38 0%, #0d2b1a 70%),
-    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px),
-    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px);
-  pointer-events: none;
-}
+/* LOBBY */
+#page-lobby{padding:24px 20px;gap:14px;justify-content:flex-start;padding-top:28px}
+.page-header{font-family:'Cinzel',serif;font-size:20px;color:var(--gold);text-align:center;
+  width:100%;padding-bottom:12px;border-bottom:1px solid rgba(240,192,64,.3)}
+.lobby-section{width:100%;max-width:340px;background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;
+  display:flex;flex-direction:column;gap:10px}
+.lobby-section-title{font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:3px;color:var(--gray);text-align:center}
+.input-field{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;
+  padding:11px 14px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:16px;
+  font-weight:600;letter-spacing:1px;width:100%;outline:none}
+.input-field:focus{border-color:var(--gold)}
+.input-field::placeholder{color:var(--gray)}
+.code-input{text-align:center;font-family:'Bebas Neue',cursive;font-size:26px;letter-spacing:8px;text-transform:uppercase}
+.divider-or{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:2px;
+  color:var(--gray);width:100%;max-width:340px}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+.error-msg{color:var(--red);font-size:13px;text-align:center;min-height:18px;font-weight:600}
 
-.page {
-  position: relative; z-index: 1;
-  min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center;
-}
-.hidden { display: none !important; }
+/* PLAYER COUNT SELECTOR */
+.player-count-row{display:flex;gap:8px;width:100%}
+.count-btn{flex:1;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);
+  border-radius:6px;padding:10px 4px;color:var(--gray);
+  font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;cursor:pointer;text-align:center;
+  transition:all .15s}
+.count-btn.active{background:rgba(240,192,64,.15);border-color:var(--gold);color:var(--gold)}
 
-/* ── BUTTONS ── */
-.btn-primary {
-  background: linear-gradient(135deg, #f0c040 0%, #b8860b 100%);
-  color: #000; border: none; border-radius: 4px;
-  font-family: 'Bebas Neue', cursive; font-size: 22px;
-  letter-spacing: 3px; padding: 14px 20px; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-  transition: transform 0.1s; width: 100%;
-}
-.btn-primary:active { transform: scale(0.97); }
-.btn-secondary {
-  background: transparent; color: var(--gold);
-  border: 2px solid var(--gold); border-radius: 4px;
-  font-family: 'Bebas Neue', cursive; font-size: 20px;
-  letter-spacing: 3px; padding: 12px 20px; cursor: pointer;
-  transition: background 0.15s; width: 100%;
-}
-.btn-secondary:hover { background: rgba(240,192,64,0.1); }
-.btn-danger {
-  background: transparent; color: var(--red-accent);
-  border: 2px solid var(--red-accent); border-radius: 4px;
-  font-family: 'Bebas Neue', cursive; font-size: 18px;
-  letter-spacing: 2px; padding: 10px 20px; cursor: pointer;
-  width: 100%;
-}
+/* WAITING / LOBBY ROOM */
+#page-waiting{justify-content:flex-start;padding:28px 20px;gap:16px;align-items:center}
+.waiting-spinner{width:54px;height:54px;border-radius:50%;border:4px solid rgba(240,192,64,.2);
+  border-top-color:var(--gold);animation:spin 1s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.waiting-title{font-family:'Bebas Neue',cursive;font-size:26px;letter-spacing:4px;color:var(--gold);text-align:center}
+.waiting-sub{font-size:14px;color:var(--gray);text-align:center}
+.room-code-display{background:rgba(0,0,0,.4);border:2px solid var(--gold);border-radius:10px;
+  padding:14px 28px;text-align:center;width:100%;max-width:320px}
+.room-code-label{font-size:11px;letter-spacing:3px;color:var(--gray)}
+.room-code-value{font-family:'Bebas Neue',cursive;font-size:40px;color:var(--gold);letter-spacing:10px}
 
-/* ── LANDING ── */
-#page-landing { justify-content: center; padding: 32px 20px; gap: 0; }
-.logo-emblem {
-  width: 100px; height: 100px; margin: 0 auto 16px;
-  background: radial-gradient(circle, #2d7a50 40%, #0d2b1a 100%);
-  border: 3px solid var(--gold); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 52px;
-  box-shadow: 0 0 24px rgba(240,192,64,0.5);
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-@keyframes pulse-glow {
-  0%,100% { box-shadow: 0 0 24px rgba(240,192,64,0.5); }
-  50% { box-shadow: 0 0 40px rgba(240,192,64,0.9); }
-}
-.logo-title {
-  font-family: 'Cinzel', serif; font-weight: 900;
-  font-size: clamp(28px,9vw,44px); color: var(--gold);
-  text-shadow: 2px 2px 0 #000; line-height: 1.1;
-  letter-spacing: 2px; text-align: center;
-}
-.logo-sub {
-  font-family: 'Bebas Neue', cursive; font-size: clamp(12px,4vw,17px);
-  color: var(--gold-light); letter-spacing: 6px; margin-top: 4px;
-  opacity: 0.8; text-align: center;
-}
-.logo-area { text-align: center; margin-bottom: 32px; }
-.menu-buttons { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 300px; }
+/* PLAYER LIST in lobby */
+.player-list{width:100%;max-width:320px;display:flex;flex-direction:column;gap:6px}
+.player-list-item{display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;padding:8px 12px}
+.player-list-item.host{border-color:rgba(240,192,64,.3)}
+.player-avatar{width:32px;height:32px;border-radius:50%;background:var(--green-mid);
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.player-list-name{font-weight:700;font-size:14px;flex:1}
+.player-list-tag{font-size:10px;letter-spacing:2px;color:var(--gold);font-family:'Bebas Neue',cursive}
+.waiting-for{font-size:12px;color:var(--gray);text-align:center;letter-spacing:.5px}
 
-/* ── LOBBY ── */
-#page-lobby { padding: 28px 20px; gap: 18px; justify-content: center; }
-.page-header {
-  font-family: 'Cinzel', serif; font-size: 22px; color: var(--gold);
-  text-align: center; width: 100%; padding-bottom: 12px;
-  border-bottom: 1px solid rgba(240,192,64,0.3);
-}
-.lobby-section {
-  width: 100%; max-width: 340px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; padding: 18px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.lobby-section-title {
-  font-family: 'Bebas Neue', cursive; font-size: 15px;
-  letter-spacing: 3px; color: var(--gray); text-align: center;
-}
-.input-field {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 6px; padding: 12px 14px;
-  color: var(--white); font-family: 'Rajdhani', sans-serif;
-  font-size: 16px; font-weight: 600; letter-spacing: 1px;
-  width: 100%; outline: none;
-}
-.input-field:focus { border-color: var(--gold); }
-.input-field::placeholder { color: var(--gray); }
-.code-input {
-  text-align: center; font-family: 'Bebas Neue', cursive;
-  font-size: 28px; letter-spacing: 8px; text-transform: uppercase;
-}
-.divider-or {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 12px; letter-spacing: 2px; color: var(--gray);
-  width: 100%; max-width: 340px;
-}
-.divider-or::before, .divider-or::after {
-  content: ''; flex: 1;
-  height: 1px; background: rgba(255,255,255,0.1);
-}
-.error-msg {
-  color: var(--red-accent); font-size: 13px;
-  text-align: center; min-height: 18px;
-  font-weight: 600; letter-spacing: 0.5px;
-}
 
-/* ── WAITING ── */
-#page-waiting { justify-content: center; padding: 32px 20px; gap: 20px; text-align: center; }
-.waiting-spinner {
-  width: 64px; height: 64px; border-radius: 50%;
-  border: 4px solid rgba(240,192,64,0.2);
-  border-top-color: var(--gold);
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.waiting-title { font-family: 'Bebas Neue', cursive; font-size: 30px; letter-spacing: 4px; color: var(--gold); }
-.waiting-sub { font-size: 15px; color: var(--gray); }
-.room-code-display {
-  background: rgba(0,0,0,0.4); border: 2px solid var(--gold);
-  border-radius: 10px; padding: 16px 28px; text-align: center;
-}
-.room-code-label { font-size: 11px; letter-spacing: 3px; color: var(--gray); }
-.room-code-value { font-family: 'Bebas Neue', cursive; font-size: 44px; color: var(--gold); letter-spacing: 10px; }
+/* HAND ARRANGE / DEAL PREVIEW */
+#page-arrange{padding:20px 14px 24px;gap:12px;align-items:center}
+.arrange-top{width:100%;max-width:420px;text-align:center}
+.arrange-title{font-family:'Cinzel',serif;font-size:20px;color:var(--gold);font-weight:900;letter-spacing:1px}
+.arrange-sub{font-size:13px;color:var(--gray);margin-top:4px;line-height:1.35}
+.arrange-timer{font-family:'Bebas Neue',cursive;font-size:36px;color:var(--gold);letter-spacing:3px;line-height:1;margin-top:8px}
+.arrange-actions{width:100%;max-width:420px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.arrange-actions .btn-primary,.arrange-actions .btn-secondary{font-size:17px;padding:10px 12px;letter-spacing:2px}
+.arrange-hand{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-bottom:8px}
+.arrange-card-tile{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.arrange-card-tile.legendary{border-color:rgba(240,192,64,.5);background:rgba(240,192,64,.06)}
+.arrange-card-tile.epic{border-color:rgba(192,112,240,.45);background:rgba(192,112,240,.05)}
+.arrange-card-tile.rare{border-color:rgba(126,200,227,.4);background:rgba(126,200,227,.04)}
+.arrange-pos{font-family:'Bebas Neue',cursive;font-size:22px;color:var(--gold);text-align:center}
+.arrange-card-name{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:1px;color:var(--white);line-height:1}
+.arrange-card-meta{font-size:11px;color:var(--gray);margin-top:2px}
+.arrange-card-quick{font-size:10px;color:rgba(255,255,255,.7);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.arrange-card-controls{display:flex;flex-direction:column;gap:4px}
+.arrange-card-controls button{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:var(--white);
+  border-radius:5px;font-size:14px;padding:4px 8px;cursor:pointer}
+.arrange-card-controls button:disabled{opacity:.25;cursor:not-allowed}
+.arrange-note{width:100%;max-width:420px;font-size:12px;color:var(--gray);text-align:center;line-height:1.35}
 
-/* ── MATCH ── */
-#page-match { padding: 10px 10px 24px; gap: 8px; align-items: center; }
-.match-header {
-  width: 100%; display: flex;
-  justify-content: space-between; align-items: center;
-  padding: 6px 4px;
-}
-.scoreboard { display: flex; gap: 10px; align-items: center; }
-.score-block { text-align: center; }
-.score-label { font-size: 10px; letter-spacing: 2px; color: var(--gray); }
-.score-num { font-family: 'Bebas Neue', cursive; font-size: 30px; color: var(--gold); line-height: 1; }
-.score-divider { font-family: 'Bebas Neue', cursive; font-size: 26px; color: rgba(255,255,255,0.2); }
-.round-badge {
-  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 20px; padding: 3px 12px; font-size: 11px;
-  font-weight: 700; letter-spacing: 1px; text-align: center;
-}
-.format-tag {
-  background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.3);
-  color: var(--gold); font-family: 'Bebas Neue', cursive;
-  font-size: 12px; letter-spacing: 3px; padding: 2px 8px; border-radius: 3px;
-  text-align: center; margin-bottom: 2px;
-}
-.cards-area { display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; }
-.card-label {
-  font-family: 'Bebas Neue', cursive; font-size: 11px; letter-spacing: 3px;
-  color: var(--gray); width: var(--card-w); text-align: center; padding-bottom: 2px;
-}
-.card-label.you { color: var(--gold); }
-.instruction-row { font-size: 12px; color: var(--gray); text-align: center; padding: 2px 0; }
-.instruction-row span { color: var(--gold); }
+/* ROLE TAGS on arrange tiles */
+.role-tag{display:inline-flex;align-items:center;gap:3px;font-family:'Bebas Neue',cursive;
+  font-size:10px;letter-spacing:1px;padding:2px 6px;border-radius:3px;border:1px solid;margin-right:4px}
+.role-tag.batter{background:rgba(240,192,64,.12);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.role-tag.bowler{background:rgba(74,192,240,.1);border-color:rgba(74,192,240,.35);color:var(--blue)}
+.role-tag.allrounder{background:rgba(50,200,80,.1);border-color:rgba(50,200,80,.35);color:var(--green-win)}
+.role-tag.keeper{background:rgba(192,112,240,.1);border-color:rgba(192,112,240,.35);color:var(--re)}
 
-/* ── CRICKET CARD ── */
-.cricket-card {
-  width: var(--card-w); border-radius: 12px;
-  position: relative; overflow: hidden;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
-  border: 2px solid var(--gold);
-}
-.cricket-card.rarity-common { border-color: var(--rarity-common); }
-.cricket-card.rarity-rare { border-color: var(--rarity-rare); }
-.cricket-card.rarity-epic { border-color: var(--rarity-epic); box-shadow: 0 8px 28px rgba(192,112,240,0.3); }
-.cricket-card.rarity-legendary { border-color: var(--rarity-legendary); box-shadow: 0 8px 36px rgba(240,192,64,0.4); }
+/* COIN TOSS */
+@keyframes coin-flip{0%{transform:rotateY(0deg) scale(1)}25%{transform:rotateY(90deg) scale(1.15)}
+  50%{transform:rotateY(180deg) scale(1)}75%{transform:rotateY(270deg) scale(1.15)}100%{transform:rotateY(360deg) scale(1)}}
+.coin-spinning{animation:coin-flip .3s linear infinite}
+@keyframes coin-land{0%{transform:scale(1.3)}60%{transform:scale(.92)}80%{transform:scale(1.06)}100%{transform:scale(1)}}
+.coin-landed{animation:coin-land .5s cubic-bezier(.175,.885,.32,1.275) forwards}
 
-.card-header {
-  background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
-  padding: 8px 10px 6px;
-  display: flex; justify-content: space-between; align-items: flex-start;
-}
-.card-player-name { font-family: 'Bebas Neue', cursive; font-size: clamp(16px,5vw,22px); color: var(--white); letter-spacing: 1px; line-height: 1; }
-.card-country-role { font-size: 10px; color: var(--gray); letter-spacing: 1px; margin-top: 2px; }
-.rarity-badge { font-family: 'Bebas Neue', cursive; font-size: 9px; letter-spacing: 2px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
-.rarity-badge.rarity-common { background: rgba(138,180,200,0.2); color: var(--rarity-common); border: 1px solid var(--rarity-common); }
-.rarity-badge.rarity-rare { background: rgba(126,200,227,0.2); color: var(--rarity-rare); border: 1px solid var(--rarity-rare); }
-.rarity-badge.rarity-epic { background: rgba(192,112,240,0.2); color: var(--rarity-epic); border: 1px solid var(--rarity-epic); }
-.rarity-badge.rarity-legendary { background: rgba(240,192,64,0.2); color: var(--rarity-legendary); border: 1px solid var(--rarity-legendary); }
+/* PHASE FITNESS BADGES */
+.fitness-row{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.fitness-badge{display:inline-flex;align-items:center;gap:3px;font-family:'Bebas Neue',cursive;
+  font-size:10px;letter-spacing:1px;padding:2px 6px;border-radius:4px;border:1px solid}
+.fitness-badge.great{background:rgba(50,200,80,.15);border-color:rgba(50,200,80,.5);color:#50e878}
+.fitness-badge.good{background:rgba(240,192,64,.12);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.fitness-badge.weak{background:rgba(232,64,64,.1);border-color:rgba(232,64,64,.35);color:#ff6060}
+.fitness-badge.avg{background:rgba(160,160,160,.1);border-color:rgba(160,160,160,.25);color:#aaa}
+/* Mismatch warning — bowler in batting rounds or batter in bowling rounds */
+.arrange-card-tile.mismatch{border-color:rgba(232,64,64,.5)!important;background:rgba(232,64,64,.05)!important}
+.mismatch-warning{font-size:10px;color:#ff8060;margin-top:3px;display:flex;align-items:center;gap:3px}
+/* Phase fitness bar */
+.fitness-bar-row{display:flex;gap:4px;margin-top:4px;align-items:center}
+.fitness-bar-label{font-size:9px;letter-spacing:1px;color:var(--gray);width:20px;flex-shrink:0}
+.fitness-bar-track{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.fitness-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.fitness-bar-fill.batting{background:linear-gradient(90deg,#f0c040,#ffb820)}
+.fitness-bar-fill.bowling{background:linear-gradient(90deg,#4ac0f0,#2090c0)}
 
-.card-avatar {
-  height: 70px;
-  background: linear-gradient(180deg, rgba(30,92,56,0.6) 0%, rgba(13,43,26,0.9) 100%);
-  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
-}
-.card-avatar::before {
-  content: ''; position: absolute; inset: 0;
-  background: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,0.015) 6px, rgba(255,255,255,0.015) 12px);
-}
-.player-silhouette { font-size: 44px; opacity: 0.7; }
-.player-initials { position: absolute; bottom: 4px; right: 8px; font-family: 'Bebas Neue', cursive; font-size: 18px; color: rgba(255,255,255,0.35); letter-spacing: 2px; }
-.country-strip { height: 4px; width: 100%; }
-.card-stats { background: rgba(10,20,14,0.97); padding: 5px 7px; }
-.stat-scroll { overflow-y: auto; max-height: 195px; }
+/* MATCH PAGE */
+#page-match{padding:8px 10px 20px;gap:6px;align-items:center}
+.match-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
+.round-info{text-align:right}
+.round-badge{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+  border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center}
 
-.stat-btn {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 7px; border-radius: 4px; margin-bottom: 3px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-  cursor: pointer; transition: background 0.1s; width: 100%; text-align: left;
-  font-family: 'Rajdhani', sans-serif;
-}
-.stat-btn:last-child { margin-bottom: 0; }
-.stat-btn:hover:not(.disabled-stat) { background: rgba(240,192,64,0.08); border-color: rgba(240,192,64,0.2); }
-.stat-btn.selected { background: rgba(240,192,64,0.15); border-color: var(--gold); }
-.stat-btn.won { background: rgba(50,200,80,0.18); border-color: #32c850; }
-.stat-btn.lost { background: rgba(232,64,64,0.15); border-color: var(--red-accent); }
-.stat-btn.drawn { background: rgba(100,150,255,0.12); border-color: #6496ff; }
-.stat-btn.disabled-stat { cursor: default; }
-.stat-label { font-size: 11px; color: var(--gray); flex: 1; }
-.stat-value { font-weight: 700; font-size: 13px; color: var(--white); min-width: 52px; text-align: right; }
-.stat-value.highlight { color: var(--gold); }
+/* MINI SCOREBOARD for 4 players */
+.scoreboard-bar{width:100%;display:flex;gap:4px;max-width:var(--card-w);flex-wrap:wrap}
+.score-pill{flex:1;min-width:60px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);
+  border-radius:6px;padding:4px 6px;text-align:center}
+.score-pill.me{border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.06)}
+.score-pill-name{font-size:9px;letter-spacing:1px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-pill-val{font-family:'Bebas Neue',cursive;font-size:20px;color:var(--gold);line-height:1}
+.score-pill.me .score-pill-val{color:var(--gold)}
+
+/* STATUS BANNER */
+.status-banner{width:100%;max-width:var(--card-w);background:rgba(0,0,0,.5);border-radius:8px;
+  padding:7px 12px;text-align:center;font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:2px;
+  border:1px solid rgba(255,255,255,.1);min-height:34px;display:flex;align-items:center;justify-content:center}
+.status-banner.your-turn{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+.status-banner.wait{border-color:var(--blue);color:var(--blue);background:rgba(74,192,240,.06)}
+.status-banner.confirm{border-color:var(--green-win);color:var(--green-win);background:rgba(50,200,80,.08)}
+
+/* CRICKET CARD */
+.cards-area{display:flex;flex-direction:column;gap:6px;align-items:center;width:100%}
+.card-label{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:3px;color:var(--gray);
+  width:var(--card-w);text-align:center;padding-bottom:2px}
+.card-label.you{color:var(--gold)}
+.cricket-card{width:var(--card-w);border-radius:12px;position:relative;overflow:hidden;
+  box-shadow:0 8px 28px rgba(0,0,0,.6);border:2px solid var(--gold)}
+.cricket-card.rarity-common{border-color:var(--rc)}
+.cricket-card.rarity-rare{border-color:var(--rr)}
+.cricket-card.rarity-epic{border-color:var(--re);box-shadow:0 8px 28px rgba(192,112,240,.3)}
+.cricket-card.rarity-legendary{border-color:var(--rl);box-shadow:0 8px 36px rgba(240,192,64,.4)}
+.card-header{background:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.4));
+  padding:8px 10px 6px;display:flex;justify-content:space-between;align-items:flex-start}
+.card-player-name{font-family:'Bebas Neue',cursive;font-size:clamp(15px,5vw,21px);color:var(--white);letter-spacing:1px;line-height:1}
+.card-country-role{font-size:10px;color:var(--gray);letter-spacing:1px;margin-top:2px}
+.rarity-badge{font-family:'Bebas Neue',cursive;font-size:9px;letter-spacing:2px;padding:2px 6px;border-radius:3px;flex-shrink:0}
+.rarity-badge.rarity-common{background:rgba(138,180,200,.2);color:var(--rc);border:1px solid var(--rc)}
+.rarity-badge.rarity-rare{background:rgba(126,200,227,.2);color:var(--rr);border:1px solid var(--rr)}
+.rarity-badge.rarity-epic{background:rgba(192,112,240,.2);color:var(--re);border:1px solid var(--re)}
+.rarity-badge.rarity-legendary{background:rgba(240,192,64,.2);color:var(--rl);border:1px solid var(--rl)}
+.card-avatar{height:56px;background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.card-avatar::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,.015) 6px,rgba(255,255,255,.015) 12px)}
+.player-silhouette{font-size:34px;opacity:.7}
+.player-initials{position:absolute;bottom:3px;right:8px;font-family:'Bebas Neue',cursive;font-size:14px;color:rgba(255,255,255,.35);letter-spacing:2px}
+.country-strip{height:3px;width:100%}
+.card-stats{background:rgba(10,20,14,.97);padding:4px 6px}
+.stat-scroll{overflow-y:auto;max-height:175px}
+.stat-btn{display:flex;justify-content:space-between;align-items:center;
+  padding:4px 7px;border-radius:4px;margin-bottom:2px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  cursor:default;width:100%;text-align:left;font-family:'Rajdhani',sans-serif;
+  transition:background .1s,border-color .1s,transform .05s}
+.stat-btn:last-child{margin-bottom:0}
+.stat-btn.clickable{cursor:pointer}
+.stat-btn.clickable:hover{background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.3)}
+.stat-btn.clickable:active{transform:scale(.97)}
+.stat-btn.selected{background:rgba(240,192,64,.12);border-color:rgba(240,192,64,.5)}
+.stat-btn.blink{background:rgba(50,200,80,.15);border-color:var(--green-win);cursor:pointer;
+  animation:blink-pulse .7s ease-in-out infinite}
+@keyframes blink-pulse{0%,100%{border-color:var(--green-win);box-shadow:0 0 0 0 rgba(50,200,80,.4)}
+  50%{border-color:#50ff70;box-shadow:0 0 8px 3px rgba(50,200,80,.5)}}
+.stat-btn.rank-1{background:rgba(240,192,64,.22);border-color:var(--gold);animation:none}
+.stat-btn.rank-2{background:rgba(160,180,200,.18);border-color:#a0b4c8;animation:none}
+.stat-btn.rank-3{background:rgba(180,120,60,.15);border-color:#c8844a;animation:none}
+.stat-btn.rank-4{background:rgba(232,64,64,.12);border-color:var(--red);animation:none}
+.stat-label{font-size:11px;color:var(--gray);flex:1}
+.stat-value{font-weight:700;font-size:13px;color:var(--white);min-width:52px;text-align:right}
+.stat-value.hl{color:var(--gold)}
 
 /* face-down card */
-.card-facedown {
-  width: var(--card-w); height: 180px; border-radius: 12px;
-  background: linear-gradient(135deg, #0d2b1a 0%, #1a4a2e 50%, #0d2b1a 100%);
-  border: 2px solid var(--gold-dark);
-  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.6); position: relative; overflow: hidden;
-}
-.card-facedown::before {
-  content: ''; position: absolute; inset: 8px;
-  border: 1px solid rgba(240,192,64,0.2); border-radius: 8px;
-  background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(240,192,64,0.04) 8px, rgba(240,192,64,0.04) 16px);
-}
-.facedown-icon { font-size: 34px; opacity: 0.4; }
-.facedown-text { font-family: 'Bebas Neue', cursive; font-size: 12px; letter-spacing: 4px; color: rgba(255,255,255,0.2); }
+.card-facedown{width:var(--card-w);height:150px;border-radius:12px;
+  background:linear-gradient(135deg,#0d2b1a,#1a4a2e,#0d2b1a);border:2px solid var(--gold-dark);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;
+  box-shadow:0 8px 28px rgba(0,0,0,.6);position:relative;overflow:hidden}
+.card-facedown::before{content:'';position:absolute;inset:8px;border:1px solid rgba(240,192,64,.2);
+  border-radius:8px;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(240,192,64,.04) 8px,rgba(240,192,64,.04) 16px)}
+.facedown-icon{font-size:28px;opacity:.4}
+.facedown-text{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:4px;color:rgba(255,255,255,.2)}
+.wait-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink-dot 1s infinite}
+@keyframes blink-dot{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* waiting-for-opponent pill */
-.waiting-pill {
-  background: rgba(74,192,240,0.1); border: 1px solid rgba(74,192,240,0.3);
-  border-radius: 20px; padding: 6px 18px;
-  font-family: 'Bebas Neue', cursive; font-size: 13px;
-  letter-spacing: 3px; color: var(--blue-accent);
-  display: flex; align-items: center; gap: 8px;
-}
-.waiting-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue-accent); animation: blink 1s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+/* AI THINKING */
+.ai-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:ai-bounce .6s ease-in-out infinite}
+.ai-dot:nth-child(2){animation-delay:.15s}.ai-dot:nth-child(3){animation-delay:.3s}
+@keyframes ai-bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
 
-/* ── RESULT OVERLAY ── */
-#result-overlay {
-  position: fixed; inset: 0; z-index: 100;
-  background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-}
-.result-popup {
-  background: linear-gradient(160deg, #1a4a2e 0%, #0d2b1a 100%);
-  border: 2px solid var(--gold); border-radius: 16px;
-  padding: 24px 28px; text-align: center; max-width: 280px; width: 90%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-  animation: pop-in 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
-}
-@keyframes pop-in { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
-.result-label { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 4px; margin-bottom: 6px; }
-.result-label.win { color: #32c850; text-shadow: 0 0 20px rgba(50,200,80,0.5); }
-.result-label.lose { color: var(--red-accent); }
-.result-label.draw { color: var(--blue-accent); }
-.result-detail { font-size: 13px; color: var(--gray); margin-bottom: 18px; line-height: 1.5; }
-.btn-next {
-  background: linear-gradient(135deg, #f0c040 0%, #b8860b 100%);
-  color: #000; border: none; border-radius: 4px;
-  font-family: 'Bebas Neue', cursive; font-size: 20px;
-  letter-spacing: 3px; padding: 12px 28px; cursor: pointer; width: 100%;
-}
-.waiting-next { font-family: 'Bebas Neue', cursive; font-size: 14px; letter-spacing: 2px; color: var(--gray); margin-top: 10px; }
+/* RESULT OVERLAY */
+#result-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);backdrop-filter:blur(6px);
+  display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:14px 12px 24px}
+.result-header{text-align:center;padding:6px 0 10px;width:100%;flex-shrink:0}
+.result-label{font-family:'Bebas Neue',cursive;font-size:38px;letter-spacing:5px;line-height:1}
+.result-label.win{color:var(--green-win);text-shadow:0 0 24px rgba(50,200,80,.6)}
+.result-label.lose{color:var(--red)}
+.result-label.draw{color:var(--blue)}
+.result-stat-line{font-size:13px;color:var(--gray);margin-top:3px;letter-spacing:.5px}
 
-/* ── FINAL ── */
-#page-final { padding: 32px 20px; gap: 20px; justify-content: center; align-items: center; }
-.final-trophy { font-size: 72px; text-align: center; animation: bounce 0.6s ease-in-out 0.3s both; }
-@keyframes bounce { from{transform:translateY(-30px);opacity:0} to{transform:translateY(0);opacity:1} }
-.final-result-text { font-family: 'Cinzel', serif; font-size: clamp(22px,7vw,30px); text-align: center; font-weight: 900; }
-.final-result-text.win { color: #32c850; }
-.final-result-text.lose { color: var(--red-accent); }
-.final-result-text.draw { color: var(--blue-accent); }
-.final-scores {
-  display: flex; gap: 20px; background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px 28px;
-}
-.final-score-block { text-align: center; }
-.final-score-name { font-size: 11px; letter-spacing: 2px; color: var(--gray); text-transform: uppercase; }
-.final-score-num { font-family: 'Bebas Neue', cursive; font-size: 52px; color: var(--gold); line-height: 1; }
-.final-score-sep { font-family: 'Bebas Neue', cursive; font-size: 38px; color: rgba(255,255,255,0.2); align-self: center; }
-.final-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px; }
-.rematch-notice { font-size: 13px; color: var(--gray); text-align: center; }
+/* PODIUM (4-player result) */
+.podium-row{display:flex;gap:6px;width:100%;max-width:var(--card-w);justify-content:center;flex-wrap:wrap;margin:8px 0}
+.podium-chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;flex:1;min-width:120px;border:1px solid}
+.podium-chip.p1{background:rgba(240,192,64,.15);border-color:var(--gold);color:var(--gold)}
+.podium-chip.p2{background:rgba(160,180,200,.12);border-color:#a0b4c8;color:#a0b4c8}
+.podium-chip.p3{background:rgba(180,120,60,.1);border-color:#c8844a;color:#c8844a}
+.podium-chip.p4{background:rgba(100,100,100,.1);border-color:#666;color:#888}
+.podium-medal{font-size:16px}
+.podium-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium-pts{font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:1px}
 
-/* ── DISCONNECT OVERLAY ── */
-#disconnect-overlay {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
-}
-.disconnect-popup {
-  background: linear-gradient(160deg, #2b1a1a 0%, #1a0d0d 100%);
-  border: 2px solid var(--red-accent); border-radius: 16px;
-  padding: 28px; text-align: center; max-width: 280px; width: 90%;
-  animation: pop-in 0.3s ease;
-}
-.dc-icon { font-size: 52px; margin-bottom: 12px; }
-.dc-title { font-family: 'Bebas Neue', cursive; font-size: 26px; letter-spacing: 3px; color: var(--red-accent); margin-bottom: 8px; }
-.dc-text { font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.5; }
+/* RESULT CARDS AREA */
+.result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1}
+.result-multi-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.result-card-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.result-card-label{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
+  width:var(--card-w);text-align:center}
+.result-card-label.you{color:var(--gold)}
+.result-card-label.opp{color:var(--blue)}
+
+/* RESULT FOOTER */
+.result-footer{width:100%;max-width:var(--card-w);display:flex;flex-direction:column;gap:8px;
+  padding-top:12px;flex-shrink:0}
+.next-picker-note{font-size:12px;color:var(--gold);text-align:center;
+  background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:6px;padding:6px 10px}
+.btn-next{background:linear-gradient(135deg,#f0c040,#b8860b);color:#000;border:none;border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:3px;padding:12px 28px;cursor:pointer;width:100%}
+.waiting-next{font-family:'Bebas Neue',cursive;font-size:12px;letter-spacing:2px;color:var(--gray);text-align:center}
+
+/* FINAL */
+#page-final{padding:28px 20px;gap:16px;justify-content:center;align-items:center}
+.final-trophy{font-size:64px;text-align:center;animation:bounce .6s ease-in-out .3s both}
+@keyframes bounce{from{transform:translateY(-30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.final-result-text{font-family:'Cinzel',serif;font-size:clamp(20px,6vw,28px);text-align:center;font-weight:900}
+.final-result-text.win{color:var(--green-win)}.final-result-text.lose{color:var(--red)}.final-result-text.draw{color:var(--blue)}
+
+/* FINAL LEADERBOARD */
+.final-leaderboard{width:100%;max-width:340px;display:flex;flex-direction:column;gap:6px}
+.final-rank-row{display:flex;align-items:center;gap:10px;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px}
+.final-rank-row.rank-1{border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.06)}
+.final-rank-row.rank-2{border-color:rgba(160,180,200,.3)}
+.final-rank-row.me{box-shadow:0 0 0 1px var(--gold)}
+.final-medal{font-size:22px;width:28px;text-align:center}
+.final-rank-name{flex:1;font-weight:700;font-size:15px}
+.final-rank-score{font-family:'Bebas Neue',cursive;font-size:26px;color:var(--gold);letter-spacing:1px}
+.final-buttons{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px}
+.rematch-notice{font-size:12px;color:var(--gray);text-align:center}
+
+/* DISCONNECT */
+#disconnect-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center}
+.disconnect-popup{background:linear-gradient(160deg,#2b1a1a,#1a0d0d);border:2px solid var(--red);
+  border-radius:16px;padding:28px;text-align:center;max-width:280px;width:90%}
+.dc-icon{font-size:48px;margin-bottom:12px}.dc-title{font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:3px;color:var(--red);margin-bottom:8px}
+.dc-text{font-size:14px;color:var(--gray);margin-bottom:20px;line-height:1.5}
+.btn-exit{background:linear-gradient(135deg,#f0c040,#b8860b);color:#000;border:none;border-radius:4px;
+  font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;padding:12px;cursor:pointer;width:100%}
 
 /* country strips */
-.country-India { background: linear-gradient(90deg,#FF9933 33%,#fff 33%,#fff 66%,#138808 66%); }
-.country-Australia { background: #FFD700; }
-.country-England { background: linear-gradient(90deg,#CF142B 33%,#FFF 33%,#FFF 66%,#CF142B 66%); }
-.country-South-Africa { background: linear-gradient(90deg,#007749,#FFB81C,#007A4D); }
-.country-New-Zealand { background: #000; }
-.country-West-Indies { background: linear-gradient(90deg,#FFD700 50%,#8B0000 50%); }
-.country-Pakistan { background: linear-gradient(90deg,#01411C 80%,white 80%); }
-.country-Sri-Lanka { background: linear-gradient(90deg,#8D153A 33%,#F5A800 33%,#F5A800 66%,#00534F 66%); }
-.country-Bangladesh { background: linear-gradient(90deg,#006A4E 55%,#F42A41 55%); }
-.country-Afghanistan { background: linear-gradient(90deg,#000 33%,#D32011 33%,#D32011 66%,#009A44 66%); }
+.country-India{background:linear-gradient(90deg,#FF9933 33%,#fff 33%,#fff 66%,#138808 66%)}
+.country-Australia{background:#FFD700}.country-England{background:linear-gradient(90deg,#CF142B 33%,#FFF 33%,#FFF 66%,#CF142B 66%)}
+.country-South-Africa{background:linear-gradient(90deg,#007749,#FFB81C,#007A4D)}.country-New-Zealand{background:#000}
+.country-West-Indies{background:linear-gradient(90deg,#FFD700 50%,#8B0000 50%)}.country-Pakistan{background:linear-gradient(90deg,#01411C 80%,white 80%)}
+.country-Sri-Lanka{background:linear-gradient(90deg,#8D153A 33%,#F5A800 33%,#F5A800 66%,#00534F 66%)}
+.country-Bangladesh{background:linear-gradient(90deg,#006A4E 55%,#F42A41 55%)}
+.country-Afghanistan{background:linear-gradient(90deg,#000 33%,#D32011 33%,#D32011 66%,#009A44 66%)}
 
-/* card reveal anim */
-@keyframes card-reveal { from{opacity:0;transform:rotateY(90deg) scale(0.9)} to{opacity:1;transform:rotateY(0deg) scale(1)} }
-.card-revealed { animation: card-reveal 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+@keyframes card-reveal{from{opacity:0;transform:rotateY(90deg) scale(.9)}to{opacity:1;transform:rotateY(0) scale(1)}}
+.card-revealed{animation:card-reveal .4s cubic-bezier(.175,.885,.32,1.275) forwards}
+@keyframes pop-in{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════ LANDING ══════════════════ -->
+<!-- LANDING -->
 <div id="page-landing" class="page">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:0;">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;">
     <div class="logo-area">
       <div class="logo-emblem">🏏</div>
       <div class="logo-title">Superstar<br>Cricket Cards</div>
-      <div class="logo-sub">Multiplayer Trump Card Game</div>
+      <div class="logo-sub">Trump Card Game</div>
     </div>
     <div class="menu-buttons">
+      <div class="menu-label">🤖 SINGLE PLAYER</div>
+      <button class="btn-green" onclick="showFormatSelect()">▶ PLAY VS AI</button>
+      <div class="menu-label" style="margin-top:4px;">🌐 MULTIPLAYER</div>
       <button class="btn-primary" onclick="showLobby()">▶ PLAY ONLINE</button>
       <button class="btn-secondary" onclick="showRules()">📋 RULES</button>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════ RULES ══════════════════ -->
-<div id="page-rules" class="page hidden" style="padding:24px 20px;max-width:500px;margin:0 auto;gap:14px;">
-  <div class="page-header" style="padding-top:20px;">📋 HOW TO PLAY</div>
-  <ul style="list-style:none;width:100%;">
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>🏏</span><div>Create a room or join with a code, or use <strong style="color:var(--gold)">Quick Match</strong> to find a random opponent.</div></li>
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>🃏</span><div>Both players receive <strong style="color:var(--gold)">10 cards</strong>. You see your cards; your opponent's are hidden.</div></li>
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>👆</span><div><strong style="color:var(--gold)">Player 1 picks a stat</strong> each round. Player 2 waits to see which stat was chosen.</div></li>
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>⬆️</span><div><strong style="color:var(--gold)">Higher is better</strong> for Runs, Wickets, 6s, 100s, Strike Rate, Catches etc.</div></li>
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>⬇️</span><div><strong style="color:var(--gold)">Lower is better</strong> for Economy Rate.</div></li>
-    <li style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:10px;">
-      <span>🎳</span><div><strong style="color:var(--gold)">Best Bowling</strong>: More wickets wins. Equal wickets → fewer runs wins.</div></li>
-    <li style="padding:9px 0;font-size:14px;display:flex;gap:10px;">
-      <span>🏆</span><div>Most points after <strong style="color:var(--gold)">10 rounds</strong> wins the match!</div></li>
-  </ul>
-  <button class="btn-secondary" style="max-width:280px;width:calc(100% - 0px);" onclick="showLanding()">← BACK</button>
+<!-- FORMAT SELECT -->
+<div id="page-format" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:20px;">
+    <div style="text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">🏏</div>
+      <div class="page-header" style="border:none;padding:0;">SELECT FORMAT</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px;letter-spacing:1px;">Choose your match format</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
+      <button class="btn-primary" onclick="selectFormat('ODI')">🌍 ODI</button>
+      <button class="btn-secondary" style="opacity:.45;cursor:not-allowed;" disabled>⚡ T20I &nbsp;<span style="font-size:11px;letter-spacing:1px;">COMING SOON</span></button>
+      <button class="btn-secondary" style="opacity:.45;cursor:not-allowed;" disabled>🏟️ TEST &nbsp;<span style="font-size:11px;letter-spacing:1px;">COMING SOON</span></button>
+      <button class="btn-primary" onclick="selectFormat('IPL')" style="background:linear-gradient(135deg,#c050ff,#7020c0);">💎 IPL</button>
+    </div>
+    <button class="btn-danger" style="max-width:200px;" onclick="showLanding()">← BACK</button>
+  </div>
 </div>
 
-<!-- ══════════════════ LOBBY ══════════════════ -->
-<div id="page-lobby" class="page hidden">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:28px 20px;gap:16px;width:100%;">
-    <div class="page-header">JOIN OR CREATE</div>
+<!-- ROLE SELECT -->
+<div id="page-role" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:20px;">
+    <div style="text-align:center;">
+      <div id="role-format-badge" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:3px;color:var(--gold);background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.3);border-radius:4px;padding:3px 12px;display:inline-block;margin-bottom:12px;">ODI</div>
+      <div class="page-header" style="border:none;padding:0;">SELECT YOUR SQUAD</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px;letter-spacing:.5px;line-height:1.5;">Your 10 cards will be picked from your chosen squad.<br>All-rounders appear in both.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
+      <button class="btn-primary" onclick="selectRole('batter')" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        <span style="font-size:22px;">🏏</span>
+        <div style="text-align:left;">
+          <div>BATTERS</div>
+          <div style="font-size:11px;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:400;">Batters + All-rounders + Keepers</div>
+        </div>
+      </button>
+      <button class="btn-green" onclick="selectRole('bowler')" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        <span style="font-size:22px;">🎳</span>
+        <div style="text-align:left;">
+          <div>BOWLERS</div>
+          <div style="font-size:11px;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:400;">Bowlers + All-rounders</div>
+        </div>
+      </button>
+    </div>
+    <button class="btn-danger" style="max-width:200px;" onclick="showFormatSelect()">← BACK</button>
+  </div>
+</div>
 
-    <!-- Name input (shared) -->
+<!-- COIN TOSS -->
+<div id="page-cointoss" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:20px;text-align:center;">
+    <div class="page-header" style="border:none;padding:0;">COIN TOSS</div>
+    <div style="font-size:13px;color:var(--gray);">Deciding who picks first…</div>
+    <div id="coin-container" style="position:relative;width:120px;height:120px;margin:8px auto;">
+      <div id="coin" style="
+        width:120px;height:120px;border-radius:50%;
+        background:radial-gradient(circle at 35% 35%,#ffe680,#f0c040 50%,#b8860b);
+        border:3px solid var(--gold);
+        display:flex;align-items:center;justify-content:center;
+        font-size:52px;
+        box-shadow:0 4px 20px rgba(240,192,64,.5);
+        transition:transform 0.08s;
+      ">🪙</div>
+    </div>
+    <div id="cointoss-result" style="min-height:60px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div id="cointoss-label" style="font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:4px;color:var(--gold);"></div>
+      <div id="cointoss-sub" style="font-size:14px;color:var(--gray);"></div>
+    </div>
+    <button id="cointoss-continue-btn" class="btn-primary hidden" style="max-width:280px;" onclick="afterCoinToss()">LET'S PLAY ▶</button>
+  </div>
+</div>
+
+<!-- RULES -->
+<div id="page-rules" class="page hidden" style="padding:24px 20px;max-width:480px;margin:0 auto;gap:12px;">
+  <div class="page-header" style="padding-top:16px;">📋 HOW TO PLAY</div>
+  <ul style="list-style:none;width:100%;">
+    <li style="padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:10px;">
+      <span>🃏</span><div>Each player gets <strong style="color:var(--gold)">10 cards</strong>. You see only your own card each round.</div></li>
+    <li style="padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:10px;">
+      <span>🎯</span><div><strong style="color:var(--gold)">All 13 stats are available every round</strong> — batting and bowling. Pick your strongest stat!</div></li>
+    <li style="padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:10px;">
+      <span>👆</span><div>The <strong style="color:var(--gold)">challenger</strong> picks a stat. All others tap the blinking stat to confirm.</div></li>
+    <li style="padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:10px;">
+      <span>🏆</span><div><strong style="color:var(--gold)">1v1:</strong> Win a round = +1 win. Most wins after 10 rounds wins the match! In <strong style="color:var(--gold)">3-4 player</strong> mode: 1st=3pts · 2nd=2pts · 3rd=1pt · 4th=0pts.</div></li>
+    <li style="padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:10px;">
+      <span>⬆️</span><div>Higher is better for all batting stats and Wickets, Catches, Stumpings.</div></li>
+    <li style="padding:8px 0;font-size:14px;display:flex;gap:10px;">
+      <span>⬇️</span><div><strong style="color:var(--gold)">Economy Rate:</strong> lower is better. <strong style="color:var(--gold)">Best Bowling:</strong> more wickets wins.</div></li>
+  </ul>
+  <button class="btn-secondary" style="max-width:260px;width:100%;" onclick="showLanding()">← BACK</button>
+</div>
+
+<!-- LOBBY -->
+<div id="page-lobby" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:24px 20px;gap:14px;width:100%;">
+    <div class="page-header">ONLINE MULTIPLAYER</div>
     <div class="lobby-section" style="max-width:340px;">
       <div class="lobby-section-title">YOUR NAME</div>
       <input class="input-field" id="player-name-input" placeholder="Enter your name" maxlength="20">
     </div>
-
-    <!-- Quick Match -->
     <div class="lobby-section" style="max-width:340px;">
-      <div class="lobby-section-title">⚡ QUICK MATCH</div>
+      <div class="lobby-section-title">⚡ QUICK MATCH (2 Players)</div>
       <button class="btn-primary" onclick="joinMatchmaking()">FIND OPPONENT</button>
     </div>
-
     <div class="divider-or">OR</div>
-
-    <!-- Create Room -->
     <div class="lobby-section" style="max-width:340px;">
-      <div class="lobby-section-title">🏠 CREATE PRIVATE ROOM</div>
+      <div class="lobby-section-title">🏠 CREATE ROOM</div>
+      <div style="font-size:12px;color:var(--gray);text-align:center;">How many players? (2–4)</div>
+      <div class="player-count-row">
+        <div class="count-btn active" id="cnt-2" onclick="setPlayerCount(2)">2</div>
+        <div class="count-btn" id="cnt-3" onclick="setPlayerCount(3)">3</div>
+        <div class="count-btn" id="cnt-4" onclick="setPlayerCount(4)">4</div>
+      </div>
       <button class="btn-primary" onclick="createRoom()">CREATE ROOM</button>
     </div>
-
     <div class="divider-or">OR</div>
-
-    <!-- Join Room -->
     <div class="lobby-section" style="max-width:340px;">
       <div class="lobby-section-title">🔑 JOIN WITH CODE</div>
       <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4">
       <button class="btn-primary" onclick="joinRoom()">JOIN ROOM</button>
     </div>
-
     <div class="error-msg" id="lobby-error"></div>
     <button class="btn-secondary" style="max-width:340px;" onclick="showLanding()">← BACK</button>
   </div>
 </div>
 
-<!-- ══════════════════ WAITING ══════════════════ -->
+<!-- WAITING / LOBBY ROOM -->
 <div id="page-waiting" class="page hidden">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 20px;gap:22px;text-align:center;">
-    <div class="waiting-spinner"></div>
-    <div class="waiting-title" id="waiting-title">FINDING OPPONENT…</div>
-    <div class="waiting-sub" id="waiting-sub">Looking for another player</div>
+  <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:28px 20px;gap:16px;width:100%;">
+    <div class="waiting-title" id="waiting-title">WAITING FOR PLAYERS…</div>
     <div class="room-code-display hidden" id="waiting-code-box">
-      <div class="room-code-label">SHARE THIS CODE</div>
+      <div class="room-code-label">ROOM CODE</div>
       <div class="room-code-value" id="waiting-code">----</div>
-      <div style="font-size:12px;color:var(--gray);margin-top:6px;">Ask your friend to enter this code</div>
+      <div style="font-size:11px;color:var(--gray);margin-top:4px;">Share with friends to join</div>
+    </div>
+    <div class="waiting-for" id="waiting-for-text">Looking for an opponent…</div>
+    <div class="player-list" id="lobby-player-list"></div>
+    <div id="start-btn-wrap" class="hidden" style="width:100%;max-width:320px;">
+      <button class="btn-primary" id="start-game-btn" onclick="hostStartGame()" disabled>
+        WAITING FOR MORE PLAYERS…
+      </button>
     </div>
     <button class="btn-danger" style="max-width:280px;" onclick="cancelWaiting()">CANCEL</button>
   </div>
 </div>
 
-<!-- ══════════════════ MATCH ══════════════════ -->
+
+<!-- ARRANGE HAND -->
+<div id="page-arrange" class="page hidden">
+  <div class="arrange-top">
+    <div class="arrange-title">🃏 YOUR 10 CARDS</div>
+    <div class="arrange-sub">Arrange your card order before the match starts. Card 1 plays in Round 1, Card 10 plays in Round 10.</div>
+    <div class="arrange-timer" id="arrange-timer">30</div>
+  </div>
+  <div class="arrange-actions">
+    <button class="btn-secondary" onclick="randomizeArrangeHand()">🎲 RANDOMIZE</button>
+    <button class="btn-secondary" onclick="smartSortArrangeHand()" style="color:var(--blue);border-color:var(--blue)">⚡ SMART SORT</button>
+    <button class="btn-primary" onclick="finishArrangeHand(true)" style="grid-column:span 2">READY ▶</button>
+  </div>
+  <div class="arrange-hand" id="arrange-hand-list"></div>
+  <div class="arrange-note">💡 Each card shows a <strong style="color:var(--gold)">🏏 Batting</strong> and <strong style="color:var(--blue)">🎳 Bowling</strong> strength. Arrange your cards in any order — all 13 stats are available every round!</div>
+</div>
+
+<!-- MATCH -->
 <div id="page-match" class="page hidden">
   <div class="match-header">
-    <div class="scoreboard">
-      <div class="score-block">
-        <div class="score-label" id="my-name-label">YOU</div>
-        <div class="score-num" id="score-me">0</div>
-      </div>
-      <div class="score-divider">:</div>
-      <div class="score-block">
-        <div class="score-label" id="opp-name-label">OPP</div>
-        <div class="score-num" id="score-opp">0</div>
-      </div>
-    </div>
-    <div>
-      <div class="format-tag" id="match-format-tag">ODI</div>
+    <div class="scoreboard-bar" id="scoreboard-bar"></div>
+    <div class="round-info">
       <div class="round-badge" id="round-badge">Round 1/10</div>
     </div>
   </div>
-
-  <div class="instruction-row" id="instruction-row">Waiting for game to start…</div>
-
+  <div class="status-banner" id="status-banner">Loading…</div>
   <div class="cards-area">
     <div class="card-label" id="opp-card-label">⚔ OPPONENT</div>
     <div id="opp-card-area"></div>
-    <div class="card-label you" id="my-card-label">★ YOUR CARD</div>
+    <div class="card-label you">★ YOUR CARD</div>
     <div id="my-card-area"></div>
   </div>
 </div>
 
-<!-- ══════════════════ FINAL ══════════════════ -->
+<!-- FINAL -->
 <div id="page-final" class="page hidden">
   <div class="final-trophy" id="final-trophy">🏆</div>
   <div class="final-result-text" id="final-result-text">YOU WON!</div>
-  <div class="final-scores">
-    <div class="final-score-block">
-      <div class="final-score-name" id="final-my-name">YOU</div>
-      <div class="final-score-num" id="final-score-me">0</div>
-    </div>
-    <div class="final-score-sep">–</div>
-    <div class="final-score-block">
-      <div class="final-score-name" id="final-opp-name">OPP</div>
-      <div class="final-score-num" id="final-score-opp">0</div>
-    </div>
-  </div>
+  <div class="final-leaderboard" id="final-leaderboard"></div>
   <div class="rematch-notice hidden" id="rematch-notice">⏳ Opponent wants a rematch!</div>
   <div class="final-buttons">
-    <button class="btn-primary" id="btn-rematch" onclick="requestRematch()">🔄 REMATCH</button>
-    <button class="btn-secondary" onclick="showLobby()">🏠 BACK TO LOBBY</button>
+    <button class="btn-primary" id="btn-play-again" onclick="playAgain()">🔄 PLAY AGAIN</button>
+    <button class="btn-secondary" onclick="showLanding()">🏠 MAIN MENU</button>
   </div>
 </div>
 
-<!-- ══════════════════ OVERLAYS ══════════════════ -->
+<!-- RESULT OVERLAY -->
 <div id="result-overlay" class="hidden">
-  <div class="result-popup">
+  <div class="result-header">
     <div class="result-label" id="result-label">WIN</div>
-    <div class="result-detail" id="result-detail"></div>
-    <button class="btn-next" id="result-next-btn" onclick="ackNext()">NEXT ROUND ▶</button>
-    <div class="waiting-next hidden" id="waiting-next-msg">⏳ Waiting for opponent…</div>
+    <div class="result-stat-line" id="result-stat-line"></div>
+  </div>
+  <div class="podium-row hidden" id="podium-row"></div>
+  <div class="result-cards-area" id="result-cards-area"></div>
+  <div class="result-footer">
+    <div class="next-picker-note hidden" id="next-picker-note"></div>
+    <button class="btn-next" id="result-next-btn">NEXT ROUND ▶</button>
+    <div class="waiting-next hidden" id="waiting-next-msg">⏳ Waiting for other players…</div>
   </div>
 </div>
 
+<!-- DISCONNECT -->
 <div id="disconnect-overlay" class="hidden">
   <div class="disconnect-popup">
     <div class="dc-icon">📡</div>
-    <div class="dc-title">OPPONENT LEFT</div>
-    <div class="dc-text" id="dc-text">Your opponent disconnected.<br>You win by default!</div>
-    <button class="btn-next" onclick="showLobby()">BACK TO LOBBY</button>
+    <div class="dc-title">PLAYER LEFT</div>
+    <div class="dc-text" id="dc-text">A player disconnected.</div>
+    <button class="btn-exit" onclick="showLanding()">MAIN MENU</button>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════════════
-// STAT CONFIG
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════
+const TOTAL_ROUNDS  = 10;
+const PODIUM_POINTS = [3,2,1,0];  // used for 3-4 players only
+
+// In 1v1: winner gets 1 round win, loser gets 0. No podium points.
+// In 3-4p: use podium points.
+function awardPoints(rank, totalPlayers) {
+  if (totalPlayers <= 2) return rank === 0 ? 1 : 0;
+  return PODIUM_POINTS[rank] ?? 0;
+}
+const MEDALS        = ['🥇','🥈','🥉','4️⃣'];
+const PODIUM_CLASSES= ['p1','p2','p3','p4'];
+
 const STAT_CONFIG = [
-  { key: 'matches',      label: 'Matches',       lowerBetter: false },
-  { key: 'runs',         label: 'Runs',          lowerBetter: false },
-  { key: 'fours',        label: '4s',            lowerBetter: false },
-  { key: 'sixes',        label: '6s',            lowerBetter: false },
-  { key: 'fifties',      label: '50s',           lowerBetter: false },
-  { key: 'hundreds',     label: '100s',          lowerBetter: false },
-  { key: 'highestScore', label: 'Highest Score', lowerBetter: false },
-  { key: 'strikeRate',   label: 'Strike Rate',   lowerBetter: false },
-  { key: 'bestBowling',  label: 'Best Bowling',  special: true },
-  { key: 'economyRate',  label: 'Economy Rate',  lowerBetter: true  },
-  { key: 'wickets',      label: 'Wickets',       lowerBetter: false },
-  { key: 'catches',      label: 'Catches',       lowerBetter: false },
-  { key: 'stumpings',    label: 'Stumpings',     lowerBetter: false },
+  { key:'matches',      label:'Matches', lowerBetter:false },
+  { key:'runs',         label:'Runs', lowerBetter:false },
+  { key:'fours',        label:'4s', lowerBetter:false },
+  { key:'sixes',        label:'6s', lowerBetter:false },
+  { key:'fifties',      label:'50s', lowerBetter:false },
+  { key:'hundreds',     label:'100s', lowerBetter:false },
+  { key:'highestScore', label:'Highest Score', lowerBetter:false },
+  { key:'strikeRate',   label:'Strike Rate', lowerBetter:false },
+  { key:'bestBowling',  label:'Best Bowling', special:true      },
+  { key:'economyRate',  label:'Economy Rate', lowerBetter:true  },
+  { key:'wickets',      label:'Wickets', lowerBetter:false },
+  { key:'catches',      label:'Catches', lowerBetter:false },
+  { key:'stumpings',    label:'Stumpings', lowerBetter:false },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT STATE
-// ═══════════════════════════════════════════════════════════════════════════════
-const STATE = {
-  myName: '',
-  opponentName: '',
-  myIndex: 0,         // 0 = p1 (picks), 1 = p2 (waits)
+// ═══════════════════════════════════════════════════════════════════
+// COMPARISON
+// ═══════════════════════════════════════════════════════════════════
+function statSortValue(card, key) {
+  if (key === 'bestBowling') return card.bestBowlingWickets * 1000 - card.bestBowlingRuns;
+  const v = parseFloat(card[key]) || 0;
+  const cfg = STAT_CONFIG.find(s => s.key === key);
+  return cfg.lowerBetter ? (v === 0 ? -Infinity : -v) : v;
+}
+
+// Rank an array of { socketId/id, card } → returns sorted with rank and points
+function rankEntries(entries, key) {
+  const withVal = entries.map(e => ({ ...e, sv: statSortValue(e.card, key) }));
+  withVal.sort((a,b) => b.sv - a.sv);
+  let rank = 0;
+  for (let i=0; i<withVal.length; i++) {
+    if (i > 0 && withVal[i].sv !== withVal[i-1].sv) rank++;
+    withVal[i].rank   = rank;
+    withVal[i].points = awardPoints(rank, withVal.length);
+  }
+  return withVal;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AI BRAIN
+// ═══════════════════════════════════════════════════════════════════
+const DECK_AVERAGES = {};
+function computeDeckAverages(deck) {
+  const d = deck || ODI_CARDS;
+  STAT_CONFIG.forEach(sc => {
+    if (sc.special) {
+      DECK_AVERAGES[sc.key] = d.reduce((a,c) => a+c.bestBowlingWickets*10-c.bestBowlingRuns,0)/d.length;
+    } else if (sc.lowerBetter) {
+      const nz = d.filter(c => (parseFloat(c[sc.key])||0)>0);
+      DECK_AVERAGES[sc.key] = nz.length ? nz.reduce((a,c)=>a+parseFloat(c[sc.key]),0)/nz.length : 1;
+    } else {
+      DECK_AVERAGES[sc.key] = d.reduce((a,c)=>a+(parseFloat(c[sc.key])||0),0)/d.length;
+    }
+  });
+}
+
+function aiPickBestStat(aiCard, phase) {
+  const allowed = STAT_CONFIG.map(s => s.key);
+  let bestKey = null, bestScore = -Infinity;
+  STAT_CONFIG.filter(sc => allowed.includes(sc.key) || (sc.special && phase==='bowling')).forEach(sc => {
+    let score = 0;
+    if (sc.special) score = aiCard.bestBowlingWickets*10 - aiCard.bestBowlingRuns;
+    else if (sc.lowerBetter) { const v=parseFloat(aiCard[sc.key])||0; score = v===0?-999:-v; }
+    else score = parseFloat(aiCard[sc.key])||0;
+    const norm = score / (DECK_AVERAGES[sc.key]||1);
+    if (norm > bestScore) { bestScore=norm; bestKey=sc.key; }
+  });
+  return bestKey;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════════
+const G = {
+  mode: 'ai',         // 'ai' | 'online'
+  mySocketId: null,
+  myName: 'You',
+  myIndex: 0,
+  players: [],        // [{ socketId, name, score }] — all players
   myHand: [],
+  aiHands: {},        // AI mode: { socketId: cards[] }
   round: 0,
-  totalRounds: 10,
+  totalRounds: TOTAL_ROUNDS,
   myCard: null,
-  oppCard: null,      // revealed after pick
-  myScore: 0,
-  oppScore: 0,
-  canPick: false,
+  oppCards: {},       // { socketId: card } — revealed after result
+  phase: 'pick',
+  pickerIndex: 0,
+  chosenStat: null,
   ackedNext: false,
-  format: 'ODI',
+  confirmedOnline: false,
   inGame: false,
+  arranging: false,
+  arrangeTimer: null,
+  arrangeSecondsLeft: 30,
+  pendingRoundStart: null,
+  // for lobby
+  selectedPlayerCount: 2,
+  roomCode: null,
+  isHost: false,
+  // AI game flow
+  selectedFormat: 'ODI',
+  selectedRole: null,       // 'batter' | 'bowler' | null (all)
+  coinTossWinner: null,     // 'player' | 'ai'
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SOCKET SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-const socket = io('https://superstar-cricket-cards.onrender.com');
+function currentPhase() { return 'all'; }
+function allowedStats()  { return STAT_CONFIG.map(s => s.key); }
 
-socket.on('connect', () => console.log('Connected:', socket.id));
-socket.on('disconnect', () => {
-  if (STATE.inGame) showDisconnectOverlay('You lost connection to the server.');
-});
 
-// Room events
-socket.on('room:created', ({ code }) => {
-  showWaiting(code);
-});
-socket.on('room:ready', ({ opponentName, code }) => {
-  // Both players in room — game starting
-});
-socket.on('room:error', ({ message }) => {
-  setLobbyError(message);
-  showLobby();
-});
+// ═══════════════════════════════════════════════════════════════════
+// PRE-MATCH HAND ARRANGEMENT
+// ═══════════════════════════════════════════════════════════════════
+function showArrangePhase() {
+  G.arranging = true;
+  G.arrangeSecondsLeft = 30;
+  if (G.arrangeTimer) clearInterval(G.arrangeTimer);
+  renderArrangeHand();
+  updateArrangeTimer();
+  showPage('page-arrange');
+  G.arrangeTimer = setInterval(() => {
+    G.arrangeSecondsLeft--;
+    updateArrangeTimer();
+    if (G.arrangeSecondsLeft <= 0) finishArrangeHand(false);
+  }, 1000);
+}
 
-// Matchmaking
-socket.on('matchmaking:waiting', () => {
-  showWaiting(null); // no code for matchmaking
-});
-socket.on('matchmaking:matched', ({ opponentName, code }) => {
-  // game:start will arrive shortly
-});
-socket.on('matchmaking:cancelled', () => {
-  showLobby();
-});
+function updateArrangeTimer() {
+  const el = document.getElementById('arrange-timer');
+  if (!el) return;
+  el.textContent = String(Math.max(0, G.arrangeSecondsLeft));
+  el.style.color = G.arrangeSecondsLeft <= 5 ? 'var(--red)' : 'var(--gold)';
+}
 
-// Game lifecycle
-socket.on('game:start', ({ yourHand, opponentName, yourIndex, totalRounds, format }) => {
-  STATE.myHand       = yourHand;
-  STATE.opponentName = opponentName;
-  STATE.myIndex      = yourIndex;
-  STATE.totalRounds  = totalRounds;
-  STATE.format       = format;
-  STATE.myScore      = 0;
-  STATE.oppScore     = 0;
-  STATE.inGame       = true;
-  document.getElementById('my-name-label').textContent  = STATE.myName || 'YOU';
-  document.getElementById('opp-name-label').textContent = opponentName;
-  document.getElementById('final-my-name').textContent  = STATE.myName || 'YOU';
-  document.getElementById('final-opp-name').textContent = opponentName;
-  document.getElementById('match-format-tag').textContent = format;
+// ═══════════════════════════════════════════════════════════════════
+// CARD PHASE STRENGTH — scores each card 0-100 for batting and bowling
+// based on actual stats relative to deck averages
+// ═══════════════════════════════════════════════════════════════════
+function cardPhaseStrength(card) {
+  // BATTING score: weighted average of normalised batting stats
+  const battingStats = [
+    { key: 'runs',         weight: 3 },
+    { key: 'hundreds',     weight: 2.5 },
+    { key: 'strikeRate',   weight: 1.5 },
+    { key: 'sixes',        weight: 1 },
+    { key: 'fifties',      weight: 1 },
+    { key: 'highestScore', weight: 1 },
+  ];
+  let battingScore = 0, battingWeight = 0;
+  battingStats.forEach(({ key, weight }) => {
+    const v   = parseFloat(card[key]) || 0;
+    const avg = DECK_AVERAGES[key] || 1;
+    battingScore  += Math.min(v / avg, 3) * weight; // cap at 3x avg
+    battingWeight += weight;
+  });
+  battingScore = Math.min((battingScore / battingWeight) * 40, 100);
+
+  // BOWLING score: weighted average of normalised bowling stats
+  const bowlingStats = [
+    { key: 'wickets',      weight: 3 },
+    { key: 'economyRate',  weight: 2, invert: true },  // lower = better
+    { key: 'catches',      weight: 1 },
+    { key: 'stumpings',    weight: 0.5 },
+  ];
+  // best bowling: wickets * 10 - runs, normalised
+  const bbScore = (card.bestBowlingWickets * 10 - card.bestBowlingRuns);
+  const bbAvg   = (DECK_AVERAGES['bestBowling'] || 1);
+  let bowlingScore = Math.min(bbScore / bbAvg, 3) * 2.5;
+  let bowlingWeight = 2.5;
+
+  bowlingStats.forEach(({ key, weight, invert }) => {
+    const v   = parseFloat(card[key]) || 0;
+    const avg = DECK_AVERAGES[key] || 1;
+    let norm  = v === 0 ? 0 : v / avg;
+    if (invert) norm = v === 0 ? 0 : avg / v; // economy: lower=better
+    bowlingScore  += Math.min(norm, 3) * weight;
+    bowlingWeight += weight;
+  });
+  bowlingScore = Math.min((bowlingScore / bowlingWeight) * 40, 100);
+
+  return {
+    batting:  Math.round(battingScore),
+    bowling:  Math.round(bowlingScore),
+  };
+}
+
+function fitnessLabel(score) {
+  if (score >= 65) return { cls: 'great', label: 'GREAT' };
+  if (score >= 40) return { cls: 'good',  label: 'GOOD'  };
+  if (score >= 20) return { cls: 'avg',   label: 'FAIR'  };
+  return                 { cls: 'weak',   label: 'WEAK'  };
+}
+
+function isMismatch(card, roundIndex) { return false; }
+
+function renderArrangeHand() {
+  const list = document.getElementById('arrange-hand-list');
+  if (!list) return;
+  list.innerHTML = G.myHand.map((card, i) => {
+    const rarity      = String(card.rarity || '').toLowerCase();
+    const strength    = cardPhaseStrength(card);
+    const batFit      = fitnessLabel(strength.batting);
+    const bowlFit     = fitnessLabel(strength.bowling);
+    const mismatch    = isMismatch(card, i);
+    const mismatchTip = '';
+
+    return `<div class="arrange-card-tile ${rarity}${mismatch?' mismatch':''}">
+      <div class="arrange-pos">${i+1}</div>
+      <div>
+        <div class="arrange-card-name">${card.name}</div>
+        <div class="arrange-card-meta">${roleTagHTML(card)}${card.country} · Round ${i+1}</div>
+        <div class="fitness-row">
+          <span class="fitness-badge ${batFit.cls}">🏏 ${batFit.label}</span>
+          <span class="fitness-badge ${bowlFit.cls}">🎳 ${bowlFit.label}</span>
+        </div>
+        <div class="fitness-bar-row">
+          <div class="fitness-bar-label" style="color:var(--gold);font-size:8px">BAT</div>
+          <div class="fitness-bar-track"><div class="fitness-bar-fill batting" style="width:${strength.batting}%"></div></div>
+        </div>
+        <div class="fitness-bar-row">
+          <div class="fitness-bar-label" style="color:var(--blue);font-size:8px">BWL</div>
+          <div class="fitness-bar-track"><div class="fitness-bar-fill bowling" style="width:${strength.bowling}%"></div></div>
+        </div>
+        ${mismatchTip}
+      </div>
+      <div class="arrange-card-controls">
+        <button onclick="moveArrangeCard(${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button onclick="moveArrangeCard(${i},1)" ${i===G.myHand.length-1?'disabled':''}>▼</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function moveArrangeCard(index, dir) {
+  const next = index + dir;
+  if (next < 0 || next >= G.myHand.length) return;
+  [G.myHand[index], G.myHand[next]] = [G.myHand[next], G.myHand[index]];
+  renderArrangeHand();
+}
+
+function randomizeArrangeHand() {
+  G.myHand = shuffle(G.myHand);
+  renderArrangeHand();
+}
+
+function smartSortArrangeHand() {
+  // Score each card for batting and bowling
+  // Sort: best batting cards into slots 0-4, best bowling cards into slots 5-9
+  const scored = G.myHand.map(card => ({
+    card,
+    strength: cardPhaseStrength(card),
+  }));
+
+  // Sort by batting strength desc for first 5, bowling strength desc for last 5
+  // Strategy: assign each card to the phase where it has a comparative advantage
+  // First, sort all cards by (batting - bowling) descending
+  // Top 5 go into batting slots, bottom 5 into bowling slots
+  // Within each group, sort by relevant strength desc
+  scored.sort((a, b) => (b.strength.batting - b.strength.bowling) - (a.strength.batting - a.strength.bowling));
+
+  const battingGroup = scored.slice(0, 5).sort((a,b) => b.strength.batting - a.strength.batting);
+  const bowlingGroup = scored.slice(5).sort((a,b) => b.strength.bowling - a.strength.bowling);
+
+  G.myHand = [...battingGroup.map(s=>s.card), ...bowlingGroup.map(s=>s.card)];
+  renderArrangeHand();
+}
+
+function finishArrangeHand(manualReady) {
+  if (!G.arranging) return;
+  G.arranging = false;
+  if (G.arrangeTimer) { clearInterval(G.arrangeTimer); G.arrangeTimer = null; }
+
+  const orderedCardIds = G.myHand.map(c => c.id);
+  if (G.mode === 'online' && socket) {
+    // Server-side requirement: use this order when dealing round cards for this socket.
+    socket.emit('hand:reorder', { orderedCardIds, manualReady });
+  }
+
+  setupMatchUI();
   showPage('page-match');
-});
 
-socket.on('round:start', ({ round, yourCard, canPick }) => {
-  STATE.round   = round;
-  STATE.myCard  = yourCard;
-  STATE.oppCard = null;
-  STATE.canPick = canPick;
-  STATE.ackedNext = false;
+  if (G.mode === 'ai') {
+    aiRenderRound();
+    return;
+  }
+
+  if (G.pendingRoundStart) {
+    const payload = G.pendingRoundStart;
+    G.pendingRoundStart = null;
+    applyRoundStart(payload);
+  } else {
+    const banner = document.getElementById('status-banner');
+    banner.innerHTML = '<span class="wait-dot"></span>&nbsp;&nbsp;Waiting for other players to finish arranging…';
+    banner.className = 'status-banner wait';
+    renderMyCard({ clickable:false });
+    renderOppFacedown();
+  }
+}
+
+function applyRoundStart({ round, yourCard, pickerIndex, pickerName, scores, totalRounds }) {
+  G.round       = round;
+  G.myCard      = yourCard;
+  G.phase       = 'pick';
+  G.pickerIndex = pickerIndex;
+  G.chosenStat  = null;
+  G.ackedNext   = false;
+  G.confirmedOnline = false;
+  G.oppCards    = {};
+  if (scores) G.players.forEach(p => { if (scores[p.socketId] !== undefined) p.score = scores[p.socketId]; });
   document.getElementById('result-overlay').classList.add('hidden');
-  renderRound();
-});
+  showPage('page-match');
+  renderOnlineRound();
+}
 
-socket.on('round:result', ({ statKey, p1Card, p2Card, winner, scores, isLastRound, youAre }) => {
-  // Determine which card is mine / opponent's
-  const myCard  = youAre === 'p1' ? p1Card : p2Card;
-  const oppCard = youAre === 'p1' ? p2Card : p1Card;
-  const iWon    = (winner === youAre);
-  const isDraw  = (winner === 'draw');
+// ═══════════════════════════════════════════════════════════════════
+// SOCKET
+// ═══════════════════════════════════════════════════════════════════
+let socket;
+function initSocket() {
+  if (socket && socket.connected) return;
+  socket = io('https://superstar-cricket-cards.onrender.com', {
+    transports:['websocket','polling'],
+    reconnection:true, reconnectionAttempts:10,
+    reconnectionDelay:1000, timeout:20000,
+  });
 
-  STATE.oppCard = oppCard;
-  STATE.myScore  = youAre === 'p1' ? scores.p1 : scores.p2;
-  STATE.oppScore = youAre === 'p1' ? scores.p2 : scores.p1;
+  socket.on('connect', () => { G.mySocketId = socket.id; console.log('connected', socket.id); });
+  socket.on('disconnect', () => { if (G.mode==='online' && G.inGame) showDisconnectOverlay('Connection lost.'); });
 
-  document.getElementById('score-me').textContent  = STATE.myScore;
-  document.getElementById('score-opp').textContent = STATE.oppScore;
+  socket.on('room:created', ({ code, maxPlayers }) => {
+    G.roomCode = code; G.isHost = true;
+    G.players = [{ socketId: socket.id, name: G.myName, score: 0 }];
+    showWaitingRoom(code, maxPlayers, true);
+  });
 
-  // Reveal opponent card
-  const oppArea = document.getElementById('opp-card-area');
-  const resultCtx = { winner: iWon ? 'player' : (isDraw ? 'draw' : 'ai') };
-  oppArea.innerHTML = renderCard(oppCard, { isPlayer: false, selectedStat: statKey, revealResult: resultCtx, clickable: false });
-  oppArea.firstElementChild.classList.add('card-revealed');
+  socket.on('room:playerJoined', ({ players, maxPlayers, canStart }) => {
+    G.players = players.map(p => ({ ...p, score: 0 }));
+    updateLobbyPlayerList(players, maxPlayers);
+    if (G.isHost) {
+      const btn = document.getElementById('start-game-btn');
+      if (canStart) {
+        btn.disabled = false;
+        btn.textContent = `START GAME (${players.length}/${maxPlayers} Players)`;
+      } else {
+        btn.disabled = true;
+        btn.textContent = `WAITING FOR MORE PLAYERS… (${players.length}/${maxPlayers})`;
+      }
+    }
+  });
 
-  // Update my card
-  const myArea = document.getElementById('my-card-area');
-  myArea.innerHTML = renderCard(myCard, { isPlayer: true, selectedStat: statKey, revealResult: resultCtx, clickable: false });
+  socket.on('room:error', ({ message }) => { setLobbyError(message); showLobby(); });
+  socket.on('matchmaking:waiting',   () => showWaitingRoom(null, 2, false));
+  socket.on('matchmaking:cancelled', () => showLobby());
+  socket.on('matchmaking:matched',   () => {});
 
-  showRoundResultOverlay({ iWon, isDraw, statKey, myCard, oppCard, isLastRound });
-});
+  socket.on('game:start', ({ yourHand, players, yourIndex, totalRounds, battingRounds, format, maxPlayers }) => {
+    G.mode        = 'online';
+    G.myHand      = [...yourHand];
+    G.players     = players.map(p => ({ ...p, score: 0 }));
+    G.myIndex     = yourIndex;
+    G.totalRounds = totalRounds;
+    G.myCard      = null;
+    G.oppCards    = {};
+    G.pendingRoundStart = null;
+    G.inGame      = true;
+    // New pre-match hand arrangement phase. The server should wait for hand:reorder
+    // or for its own 30-second timeout before sending round:start. If an older server
+    // sends round:start immediately, we buffer it until the player presses READY.
+    showArrangePhase();
+  });
 
-socket.on('game:over', ({ reason, scores, matchWinner, p1Name, p2Name, youAre }) => {
-  STATE.inGame = false;
-  if (reason === 'disconnect') return; // handled by opponentDisconnected
-  const iWon  = (matchWinner === youAre);
-  const isDraw = (matchWinner === 'draw');
-  showFinalResult(iWon, isDraw, scores, youAre);
-});
+  socket.on('round:start', (payload) => {
+    if (G.arranging) {
+      G.pendingRoundStart = payload;
+      return;
+    }
+    applyRoundStart(payload);
+  });
 
-socket.on('game:opponentDisconnected', ({ opponentName }) => {
-  STATE.inGame = false;
-  showDisconnectOverlay(`${opponentName} disconnected.\nYou win by default!`);
-});
+  socket.on('round:statChosen', ({ statKey, pickerName, youMustConfirm }) => {
+    G.phase      = 'confirm';
+    G.chosenStat = statKey;
+    updateScoreboardBar();
+    const banner = document.getElementById('status-banner');
+    if (youMustConfirm) {
+      banner.textContent = `${pickerName} chose ${statLabel(statKey)} — TAP TO CONFIRM!`;
+      banner.className   = 'status-banner confirm';
+      renderMyCard({ blink: statKey });
+    } else {
+      banner.textContent = `You chose ${statLabel(statKey)} — waiting for others…`;
+      banner.className   = 'status-banner wait';
+      renderMyCard({ selected: statKey });
+    }
+    renderOppFacedown();
+  });
 
-socket.on('game:opponentWantsRematch', () => {
-  document.getElementById('rematch-notice').classList.remove('hidden');
-});
+  socket.on('round:result', ({ round, statKey, ranked, scores, allCards, isLastRound, nextPickerIndex, nextPickerName, yourIndex }) => {
+    G.phase       = 'result';
+    G.chosenStat  = statKey;
+    G.pickerIndex = nextPickerIndex;
+    // Update scores and store all revealed cards
+    G.players.forEach(p => { if (scores[p.socketId] !== undefined) p.score = scores[p.socketId]; });
+    G.oppCards = allCards;
+    G.myCard   = allCards[socket.id] || G.myCard;
+    updateScoreboardBar();
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAGE NAVIGATION
-// ═══════════════════════════════════════════════════════════════════════════════
+    const myRankEntry = ranked.find(r => r.socketId === socket.id);
+    const iWon  = myRankEntry && myRankEntry.rank === 0;
+    const isDraw= ranked.filter(r=>r.rank===0).length > 1 && iWon;
+
+    showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName, nextPickerIndex, ranked, allCards, mode:'online' });
+  });
+
+  socket.on('game:over', ({ reason, scores, finalRanking, yourIndex }) => {
+    G.inGame = false;
+    if (reason==='disconnect') return;
+    G.players.forEach(p => { if (scores[p.socketId]!==undefined) p.score=scores[p.socketId]; });
+    showFinalResult(finalRanking, yourIndex);
+  });
+
+  socket.on('game:opponentDisconnected', ({ opponentName }) => {
+    G.inGame = false;
+    showDisconnectOverlay(`${opponentName} disconnected.`);
+  });
+
+  socket.on('game:opponentWantsRematch', () => {
+    document.getElementById('rematch-notice').classList.remove('hidden');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PAGE NAV
+// ═══════════════════════════════════════════════════════════════════
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
-function showLanding() { STATE.inGame = false; showPage('page-landing'); }
+function showLanding() { G.inGame=false; showPage('page-landing'); }
 function showRules()   { showPage('page-rules'); }
 function showLobby() {
+  initSocket();
   document.getElementById('disconnect-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
   setLobbyError('');
+  G.isHost = false; G.roomCode = null;
   showPage('page-lobby');
-}
-function showWaiting(code) {
-  showPage('page-waiting');
-  if (code) {
-    document.getElementById('waiting-title').textContent = 'WAITING FOR OPPONENT…';
-    document.getElementById('waiting-sub').textContent = 'Share the room code below';
-    document.getElementById('waiting-code').textContent = code;
-    document.getElementById('waiting-code-box').classList.remove('hidden');
-  } else {
-    document.getElementById('waiting-title').textContent = 'FINDING OPPONENT…';
-    document.getElementById('waiting-sub').textContent = 'Looking for another player';
-    document.getElementById('waiting-code-box').classList.add('hidden');
-  }
 }
 function showDisconnectOverlay(msg) {
   document.getElementById('dc-text').textContent = msg;
   document.getElementById('disconnect-overlay').classList.remove('hidden');
 }
-function setLobbyError(msg) {
-  document.getElementById('lobby-error').textContent = msg;
+function setLobbyError(msg) { document.getElementById('lobby-error').textContent=msg; }
+
+// ── LOBBY PLAYER COUNT SELECTOR
+function setPlayerCount(n) {
+  G.selectedPlayerCount = n;
+  [2,3,4].forEach(i => {
+    document.getElementById(`cnt-${i}`).className = 'count-btn' + (i===n?' active':'');
+  });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOBBY ACTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-function getPlayerName() {
-  const name = document.getElementById('player-name-input').value.trim();
-  if (!name) {
-    setLobbyError('Please enter your name first.');
-    return null;
+// ── WAITING ROOM UI
+function showWaitingRoom(code, maxPlayers, isHost) {
+  showPage('page-waiting');
+  G.isHost = isHost;
+  document.getElementById('waiting-title').textContent = code ? 'WAITING FOR PLAYERS…' : 'FINDING OPPONENT…';
+
+  const codeBox = document.getElementById('waiting-code-box');
+  if (code) {
+    document.getElementById('waiting-code').textContent = code;
+    codeBox.classList.remove('hidden');
+  } else {
+    codeBox.classList.add('hidden');
   }
-  STATE.myName = name;
-  document.getElementById('my-name-label').textContent = name;
-  return name;
+
+  const startWrap = document.getElementById('start-btn-wrap');
+  if (isHost) {
+    startWrap.classList.remove('hidden');
+    const btn = document.getElementById('start-game-btn');
+    btn.disabled = true;
+    btn.textContent = `WAITING FOR MORE PLAYERS… (1/${maxPlayers})`;
+  } else {
+    startWrap.classList.add('hidden');
+  }
+
+  // Seed player list with self
+  updateLobbyPlayerList(G.players.length ? G.players : [{ name: G.myName, socketId: socket?.id }], maxPlayers);
 }
 
+function updateLobbyPlayerList(players, maxPlayers) {
+  const list = document.getElementById('lobby-player-list');
+  const forText = document.getElementById('waiting-for-text');
+  list.innerHTML = '';
+  players.forEach((p, i) => {
+    const isMe = p.socketId === socket?.id;
+    const div = document.createElement('div');
+    div.className = 'player-list-item' + (i===0?' host':'');
+    div.innerHTML = `
+      <div class="player-avatar">${['🏏','🎯','⚡','🌟'][i]}</div>
+      <div class="player-list-name">${p.name}</div>
+      ${i===0 ? '<div class="player-list-tag">HOST</div>' : ''}
+      ${isMe ? '<div class="player-list-tag" style="color:var(--green-win)">YOU</div>' : ''}`;
+    list.appendChild(div);
+  });
+  // Empty slots
+  for (let i=players.length; i<maxPlayers; i++) {
+    const div = document.createElement('div');
+    div.className = 'player-list-item';
+    div.innerHTML = `<div class="player-avatar" style="opacity:.3">👤</div>
+      <div class="player-list-name" style="color:var(--gray);opacity:.5">Waiting…</div>`;
+    list.appendChild(div);
+  }
+  forText.textContent = `${players.length}/${maxPlayers} players in room`;
+}
+
+function hostStartGame() {
+  if (!socket) return;
+  socket.emit('room:start');
+}
+
+// ── LOBBY ACTIONS
+function getPlayerName() {
+  const n = document.getElementById('player-name-input').value.trim();
+  if (!n) { setLobbyError('Please enter your name first.'); return null; }
+  G.myName = n; return n;
+}
 function createRoom() {
-  const name = getPlayerName(); if (!name) return;
-  socket.emit('room:create', { playerName: name, format: 'ODI' });
+  const n = getPlayerName(); if (!n) return;
+  socket.emit('room:create', { playerName: n, maxPlayers: G.selectedPlayerCount, format: 'ODI' });
 }
-
 function joinRoom() {
-  const name = getPlayerName(); if (!name) return;
-  const code = document.getElementById('room-code-input').value.trim().toUpperCase();
-  if (code.length !== 4) { setLobbyError('Enter a 4-character room code.'); return; }
+  const n = getPlayerName(); if (!n) return;
+  const c = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (c.length!==4) { setLobbyError('Enter a 4-character room code.'); return; }
   setLobbyError('');
-  socket.emit('room:join', { playerName: name, code });
+  socket.emit('room:join', { playerName: n, code: c });
 }
-
 function joinMatchmaking() {
-  const name = getPlayerName(); if (!name) return;
-  socket.emit('matchmaking:join', { playerName: name, format: 'ODI' });
+  const n = getPlayerName(); if (!n) return;
+  socket.emit('matchmaking:join', { playerName: n, format: 'ODI' });
 }
-
 function cancelWaiting() {
   socket.emit('matchmaking:cancel');
   showLobby();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ROUND RENDERING
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderRound() {
-  const r = STATE.round;
-  document.getElementById('score-me').textContent  = STATE.myScore;
-  document.getElementById('score-opp').textContent = STATE.oppScore;
-  document.getElementById('round-badge').textContent = `Round ${r+1}/${STATE.totalRounds}`;
+// ═══════════════════════════════════════════════════════════════════
+// MATCH UI SETUP
+// ═══════════════════════════════════════════════════════════════════
+function setupMatchUI() {
+  updateScoreboardBar();
+  const oppNames = G.players.filter((_,i) => i !== G.myIndex).map(p => p.name);
+  document.getElementById('opp-card-label').textContent =
+    G.players.length > 2 ? '⚔ OPPONENTS' : `⚔ ${oppNames[0] || 'Opponent'}`;
+}
 
-  const isP1    = STATE.myIndex === 0;
-  const canPick = STATE.canPick;
-
-  // Instruction
-  const inst = document.getElementById('instruction-row');
-  if (canPick) {
-    inst.innerHTML = `<span>Your turn!</span> Tap a stat to challenge.`;
-  } else {
-    inst.innerHTML = `Waiting for <span>${STATE.opponentName}</span> to pick a stat…`;
-  }
-
-  // My card
-  const myArea = document.getElementById('my-card-area');
-  myArea.innerHTML = renderCard(STATE.myCard, { isPlayer: true, clickable: canPick });
-
-  // Opponent card — face down until revealed
-  const oppArea = document.getElementById('opp-card-area');
-  oppArea.innerHTML = `
-    <div class="card-facedown">
-      <div class="facedown-icon">🂠</div>
-      <div class="facedown-text">FACE DOWN</div>
+function updateScoreboardBar() {
+  const bar = document.getElementById('scoreboard-bar');
+  bar.innerHTML = G.players.map((p, i) => {
+    const isMe = i === G.myIndex;
+    return `<div class="score-pill${isMe?' me':''}">
+      <div class="score-pill-name">${isMe?'YOU':p.name.split(' ')[0]}</div>
+      <div class="score-pill-val">${p.score}</div>
+      <div style="font-size:8px;letter-spacing:1px;color:var(--gray);line-height:1">${G.players.length<=2?'WINS':'PTS'}</div>
     </div>`;
+  }).join('');
+  document.getElementById('round-badge').textContent = `Round ${G.round+1}/${G.totalRounds}`;
+}
 
-  // Labels
-  document.getElementById('opp-card-label').textContent = `⚔ ${STATE.opponentName}`;
-  document.getElementById('my-card-label').textContent  = isP1
-    ? `★ YOUR CARD ${canPick ? '— PICK A STAT' : ''}`
-    : `★ YOUR CARD`;
 
-  if (!canPick) {
-    // Show pulsing waiting pill
-    const pill = document.createElement('div');
-    pill.className = 'waiting-pill';
-    pill.innerHTML = `<div class="waiting-dot"></div> WAITING FOR ${STATE.opponentName.toUpperCase()}`;
-    pill.style.marginTop = '4px';
-    myArea.appendChild(pill);
+// ═══════════════════════════════════════════════════════════════════
+// AI GAME MODE
+// ═══════════════════════════════════════════════════════════════════
+function shuffle(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FORMAT → ROLE → COIN TOSS → ARRANGE → GAME FLOW
+// ═══════════════════════════════════════════════════════════════════
+
+function showFormatSelect() {
+  showPage('page-format');
+}
+
+function selectFormat(fmt) {
+  G.selectedFormat = fmt;
+  document.getElementById('role-format-badge').textContent = fmt;
+  showPage('page-role');
+}
+
+function getDeckForFormat(fmt) {
+  if (fmt === 'IPL') return IPL_CARDS;
+  return ODI_CARDS; // ODI default; T20I/TEST will use their own decks when added
+}
+
+function selectRole(role) {
+  // role = 'batter' | 'bowler'
+  G.selectedRole = role;
+  startAIGame();
+}
+
+// Role categorization
+// Batter squad: Batter + All-rounder + Wicket-keeper
+// Bowler squad: Bowler + All-rounder
+function getSquadByRole(role) {
+  return getSquadByRoleFromDeck(ODI_CARDS, role);
+}
+
+function getSquadByRoleFromDeck(deck, role) {
+  if (role === 'batter') {
+    return deck.filter(c =>
+      c.role === 'Batter' || c.role === 'All-rounder' || c.role === 'Wicket-keeper'
+    );
+  } else {
+    return deck.filter(c =>
+      c.role === 'Bowler' || c.role === 'All-rounder'
+    );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STAT SELECTION
-// ═══════════════════════════════════════════════════════════════════════════════
-function selectStat(statKey) {
-  if (!STATE.canPick) return;
-  STATE.canPick = false;
-  socket.emit('round:pick', { statKey });
-
-  // Update instruction
-  document.getElementById('instruction-row').innerHTML = `Stat chosen! Waiting for reveal…`;
+function roleTagHTML(card) {
+  const r = card.role;
+  if (r === 'All-rounder')    return `<span class="role-tag allrounder">⚡ All-rounder</span>`;
+  if (r === 'Wicket-keeper')  return `<span class="role-tag keeper">🧤 Keeper</span>`;
+  if (r === 'Bowler')         return `<span class="role-tag bowler">🎳 Bowler</span>`;
+  return                             `<span class="role-tag batter">🏏 Batter</span>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ROUND RESULT OVERLAY
-// ═══════════════════════════════════════════════════════════════════════════════
-function showRoundResultOverlay({ iWon, isDraw, statKey, myCard, oppCard, isLastRound }) {
-  const label  = document.getElementById('result-label');
-  const detail = document.getElementById('result-detail');
-  const nextBtn = document.getElementById('result-next-btn');
-  const waitMsg = document.getElementById('waiting-next-msg');
+function startAIGame() {
+  G.mode        = 'ai';
+  G.myName      = 'You';
+  G.myIndex     = 0;
+  G.myScore     = 0;
+  G.round       = 0;
+  G.totalRounds = TOTAL_ROUNDS;
+  G.phase       = 'pick';
+  G.chosenStat  = null;
+  G.inGame      = true;
 
-  const sc   = STAT_CONFIG.find(s => s.key === statKey);
-  const myV  = displayStatValue(myCard, statKey);
-  const oppV = displayStatValue(oppCard, statKey);
+  // Deal from role-filtered squad (or full deck if no role selected)
+  const fullDeck = getDeckForFormat(G.selectedFormat || 'ODI');
+  computeDeckAverages(fullDeck);  // recompute for this deck
+  const squad = G.selectedRole ? getSquadByRoleFromDeck(fullDeck, G.selectedRole) : fullDeck;
+  // Need at least 20 cards; fallback to full deck if squad too small
+  const pool  = squad.length >= 20 ? squad : fullDeck;
+  const deck  = shuffle(pool);
+
+  G.myHand = deck.slice(0, 10);
+  const aiCards = deck.slice(10, 20);
+  const aiId    = 'ai_player';
+
+  G.players  = [
+    { socketId: 'player', name: 'You', score: 0 },
+    { socketId: aiId,     name: 'AI',  score: 0 },
+  ];
+  G.aiHands  = { [aiId]: aiCards };
+  G.oppCards = {};
+  G.myCard   = null;
+
+  setupMatchUI();
+  showCoinToss();
+}
+
+// ── COIN TOSS ──────────────────────────────────────────────────────
+function showCoinToss() {
+  showPage('page-cointoss');
+  const coin   = document.getElementById('coin');
+  const label  = document.getElementById('cointoss-label');
+  const sub    = document.getElementById('cointoss-sub');
+  const btn    = document.getElementById('cointoss-continue-btn');
+
+  label.textContent = '';
+  sub.textContent   = '';
+  btn.classList.add('hidden');
+  coin.className    = '';
+
+  // Spin for 1.8s then land
+  coin.classList.add('coin-spinning');
+
+  setTimeout(() => {
+    coin.classList.remove('coin-spinning');
+    coin.classList.add('coin-landed');
+
+    // Random result
+    const playerGoesFirst = Math.random() < 0.5;
+    G.pickerIndex = playerGoesFirst ? 0 : 1;
+
+    if (playerGoesFirst) {
+      coin.textContent  = '😄';
+      label.textContent = 'YOU WIN THE TOSS!';
+      label.style.color = 'var(--green-win)';
+      sub.textContent   = 'You pick the stat in Round 1';
+    } else {
+      coin.textContent  = '🤖';
+      label.textContent = 'AI WINS THE TOSS!';
+      label.style.color = 'var(--blue)';
+      sub.textContent   = 'AI picks the stat in Round 1';
+    }
+
+    setTimeout(() => {
+      btn.classList.remove('hidden');
+    }, 600);
+  }, 1800);
+}
+
+function afterCoinToss() {
+  showArrangePhase();
+}
+
+
+function aiRenderRound() {
+  G.myCard     = G.myHand[G.round];
+  G.oppCards   = {};  // clear — AI card hidden until reveal
+  G.phase      = 'pick';
+  G.chosenStat = null;
+  G.ackedNext  = false;
+
+  document.getElementById('result-overlay').classList.add('hidden');
+  updateScoreboardBar();
+
+  const amPicker = G.pickerIndex === 0;
+  const banner   = document.getElementById('status-banner');
+
+  if (amPicker) {
+    banner.textContent = '⚡ YOUR TURN — Pick a stat to challenge!';
+    banner.className   = 'status-banner your-turn';
+    renderMyCard({ clickable: true });
+    renderOppFacedown();
+  } else {
+    banner.innerHTML = `<span class="wait-dot"></span>&nbsp;&nbsp;AI is thinking…`;
+    banner.className = 'status-banner wait';
+    renderMyCard({ clickable: false });
+    renderOppFacedown();
+    setTimeout(() => {
+      const aiId   = 'ai_player';
+      const aiCard = G.aiHands[aiId][G.round];
+      const best   = aiPickBestStat(aiCard, 'all');
+      aiStatChosen(best);
+    }, 1200);
+  }
+}
+
+function aiStatChosen(statKey) {
+  G.phase      = 'confirm';
+  G.chosenStat = statKey;
+  const banner = document.getElementById('status-banner');
+  banner.textContent = `AI chose ${statLabel(statKey)} — TAP IT TO CONFIRM!`;
+  banner.className   = 'status-banner confirm';
+  renderMyCard({ blink: statKey });
+  renderOppFacedown();
+}
+
+function pickStat(statKey) {
+  if (G.mode === 'online') {
+    if (G.phase !== 'pick' || G.myIndex !== G.pickerIndex) return;
+    socket.emit('round:pick', { statKey });
+    return;
+  }
+  if (G.phase !== 'pick' || G.pickerIndex !== 0) return;
+  G.phase      = 'confirm';
+  G.chosenStat = statKey;
+  const banner = document.getElementById('status-banner');
+  banner.textContent = `You chose ${statLabel(statKey)} — AI confirming…`;
+  banner.className   = 'status-banner wait';
+  renderMyCard({ selected: statKey });
+  renderOppFacedown();
+  setTimeout(() => aiResolveRound(), 900);
+}
+
+function confirmStat() {
+  if (G.mode === 'online') {
+    if (G.phase !== 'confirm' || G.myIndex === G.pickerIndex || G.confirmedOnline) return;
+    G.confirmedOnline = true;
+    socket.emit('round:confirm');
+    return;
+  }
+  if (G.phase !== 'confirm' || G.pickerIndex !== 1) return;
+  aiResolveRound();
+}
+
+function aiResolveRound() {
+  const statKey = G.chosenStat;
+  const aiId    = 'ai_player';
+  const aiCard  = G.aiHands[aiId][G.round];
+  G.oppCards    = { [aiId]: aiCard }; // reveal now
+
+  const entries = [
+    { socketId: 'player', card: G.myCard },
+    { socketId: aiId,     card: aiCard   },
+  ];
+  const ranked = rankEntries(entries, statKey);
+
+  ranked.forEach(e => {
+    const p = G.players.find(x => x.socketId === e.socketId);
+    if (p) p.score += e.points;
+  });
+
+  const myEntry = ranked.find(e => e.socketId === 'player');
+  const winner  = ranked.find(e => e.rank === 0);
+  G.pickerIndex = winner.socketId === 'player' ? 0 : 1;
+
+  const iWon        = myEntry.rank === 0;
+  const isDraw      = ranked.filter(r=>r.rank===0).length>1 && iWon;
+  const isLastRound = G.round + 1 >= TOTAL_ROUNDS;
+  const nextPickerName = G.pickerIndex === 0 ? 'You' : 'AI';
+
+  updateScoreboardBar();
+  showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
+    nextPickerIndex: G.pickerIndex, ranked, allCards: G.oppCards, mode: 'ai' });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ONLINE ROUND RENDER
+// ═══════════════════════════════════════════════════════════════════
+function renderOnlineRound() {
+  updateScoreboardBar();
+  const amPicker = G.myIndex === G.pickerIndex;
+  const picker   = G.players[G.pickerIndex];
+  const banner   = document.getElementById('status-banner');
+  if (amPicker) {
+    banner.textContent = '⚡ YOUR TURN — Pick a stat to challenge!';
+    banner.className   = 'status-banner your-turn';
+  } else {
+    banner.innerHTML = `<span class="wait-dot"></span>&nbsp;&nbsp;${picker?.name || 'Opponent'} is picking…`;
+    banner.className = 'status-banner wait';
+  }
+  renderMyCard({ clickable: amPicker });
+  renderOppFacedown();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CARD RENDERERS
+// ═══════════════════════════════════════════════════════════════════
+function renderMyCard(opts={}) {
+  document.getElementById('my-card-area').innerHTML =
+    buildCard(G.myCard, { ...opts, isMyCard: true });
+}
+
+function renderOppFacedown() {
+  document.getElementById('opp-card-area').innerHTML =
+    `<div class="card-facedown"><div class="facedown-icon">🂠</div><div class="facedown-text">FACE DOWN</div></div>`;
+}
+
+function displayVal(card, key) {
+  if (!card) return '—';
+  if (key==='bestBowling') {
+    if (!card.bestBowlingWickets && !card.bestBowlingRuns) return '—';
+    return `${card.bestBowlingWickets}/${card.bestBowlingRuns}`;
+  }
+  const v=card[key]; return (v===undefined||v===null)?'—':v;
+}
+function statLabel(key) { const s=STAT_CONFIG.find(x=>x.key===key); return s?s.label:key; }
+function countryClass(c) { return 'country-'+(c||'').replace(/ /g,'-'); }
+
+function buildCard(card, { clickable=false, selected=null, blink=null, result=null, isMyCard=true, rankClass='' }={}) {
+  if (!card) return '';
+  const initials = card.name.split(' ').map(w=>w[0]).join('').substring(0,3);
+  const rc       = 'rarity-'+card.rarity.toLowerCase();
+
+  let statsHtml = '';
+
+  STAT_CONFIG.forEach(sc => {
+    const val = displayVal(card, sc.key);
+    let cls   = 'stat-btn';
+    let onclick = '';
+
+    if (isMyCard && blink===sc.key)  { cls += ' blink'; onclick = `onclick="confirmStat()"`; }
+    else if (isMyCard && clickable)  { cls += ' clickable'; onclick = `onclick="pickStat('${sc.key}')"` ; }
+
+    if (selected===sc.key && !result) cls += ' selected';
+    if (result && selected===sc.key)  cls += ' '+rankClass;
+
+    const hlVal = selected===sc.key ? ' hl' : '';
+
+    statsHtml += `<button class="${cls}" ${onclick}>
+      <span class="stat-label">${sc.label}</span>
+      <span class="stat-value${hlVal}">${val}</span>
+    </button>`;
+  });
+
+  return `<div class="cricket-card ${rc}">
+    <div class="card-header">
+      <div>
+        <div class="card-player-name">${card.name}</div>
+        <div class="card-country-role">${card.team ? card.team + ' · ' : card.country + ' · '}${card.role}</div>
+      </div>
+      <div class="rarity-badge ${rc}">${card.rarity.toUpperCase()}</div>
+    </div>
+    <div class="card-avatar">
+      ${card.avatarUrl
+        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy">`
+        : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`
+      }
+    </div>
+    <div class="country-strip ${countryClass(card.country)}"></div>
+    <div class="card-stats"><div class="stat-scroll">${statsHtml}</div></div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESULT OVERLAY — shows all cards with ranks
+// ═══════════════════════════════════════════════════════════════════
+function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName, nextPickerIndex, ranked, allCards, mode }) {
+  const label      = document.getElementById('result-label');
+  const statLine   = document.getElementById('result-stat-line');
+  const podiumRow  = document.getElementById('podium-row');
+  const cardsArea  = document.getElementById('result-cards-area');
+  const noteEl     = document.getElementById('next-picker-note');
+  const nextBtn    = document.getElementById('result-next-btn');
+  const waitMsg    = document.getElementById('waiting-next-msg');
 
   waitMsg.classList.add('hidden');
   nextBtn.classList.remove('hidden');
-  STATE.ackedNext = false;
+  G.ackedNext = false;
 
-  if (isLastRound) {
-    nextBtn.textContent = '🏁 SEE FINAL RESULT';
+  // Result label
+  if (iWon && !isDraw)    { label.textContent='ROUND WON! 🎉'; label.className='result-label win'; }
+  else if (!iWon)         { label.textContent='ROUND LOST';    label.className='result-label lose'; }
+  else                    { label.textContent='DRAW!';         label.className='result-label draw'; }
+
+  // Stat comparison line
+  const sc  = STAT_CONFIG.find(s=>s.key===statKey);
+  const myV = displayVal(G.myCard, statKey);
+  const opV = displayVal(G.aiCard, statKey);
+  const myName  = G.myName || 'You';
+  const oppName = G.oppName || 'AI';
+  statLine.innerHTML = `Challenge: <strong>${sc.label}</strong> &mdash; <span style="color:var(--gold)">${myV}</span> (${myName}) vs <span style="color:var(--blue)">${opV}</span> (${oppName})`;
+
+  // Podium chips
+  if (ranked && ranked.length > 2 && G.players.length > 2) {
+    podiumRow.classList.remove('hidden');
+    podiumRow.innerHTML = ranked.map((e,i) => {
+      const name = G.players.find(p=>p.socketId===e.socketId)?.name || e.name || 'Player';
+      const isMe = (mode==='ai') ? e.socketId==='player' : e.socketId===socket?.id;
+      return `<div class="podium-chip ${PODIUM_CLASSES[e.rank]}">
+        <span class="podium-medal">${MEDALS[e.rank]}</span>
+        <span class="podium-name">${isMe?'YOU':name}</span>
+        <span class="podium-pts">+${e.points}pts</span>
+      </div>`;
+    }).join('');
   } else {
-    nextBtn.textContent = 'NEXT ROUND ▶';
+    podiumRow.classList.add('hidden');
   }
 
-  const detailHtml = `${sc.label}: <strong style="color:var(--gold)">${myV}</strong> vs <strong style="color:var(--blue-accent)">${oppV}</strong>`;
+  // Cards — build a mini card for each player
+  const rankClassMap = ['rank-1','rank-2','rank-3','rank-4'];
+  cardsArea.innerHTML = '';
 
-  if (isDraw) {
-    label.textContent = 'DRAW!';
-    label.className   = 'result-label draw';
-    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">No point awarded.</small>`;
-  } else if (iWon) {
-    label.textContent = 'ROUND WON!';
-    label.className   = 'result-label win';
-    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">You take the point!</small>`;
+  // Build all player card wraps
+  const allWraps = [];
+
+  if (mode === 'ai') {
+    // My card
+    const myRank = ranked.find(e=>e.socketId==='player');
+    const myCls  = rankClassMap[myRank?.rank ?? 3];
+    allWraps.push({ label:'★ YOUR CARD', labelCls:'you', card: G.myCard, rc: myCls, isMe: true });
+    // AI card
+    const aiId   = 'ai_player';
+    const aiRank = ranked.find(e=>e.socketId===aiId);
+    const aiCls  = rankClassMap[aiRank?.rank ?? 3];
+    allWraps.push({ label:'🤖 AI', labelCls:'opp', card: allCards[aiId], rc: aiCls, isMe: false });
   } else {
-    label.textContent = 'ROUND LOST';
-    label.className   = 'result-label lose';
-    detail.innerHTML  = `${detailHtml}<br><small style="color:var(--gray)">Opponent takes the point.</small>`;
+    // Online: my card first, then opponents
+    G.players.forEach((p, i) => {
+      const isMe   = p.socketId === socket.id;
+      const rEntry = ranked?.find(e=>e.socketId===p.socketId);
+      const cls    = rankClassMap[rEntry?.rank ?? 3];
+      const card   = allCards[p.socketId];
+      const label  = isMe ? '★ YOU' : p.name;
+      const pts = rEntry
+        ? (G.players.length <= 2
+            ? (rEntry.rank === 0 ? '+1 WIN' : (rEntry.rank === 0 ? '' : ''))
+            : `+${rEntry.points}pts`)
+        : '';
+      allWraps.push({ label: pts ? `${label} ${pts}` : label, labelCls: isMe?'you':'opp', card, rc: cls, isMe });
+    });
+  }
+
+  // Render single column — opponent card then my card (for 2-player feel)
+  // For 4-player wrap into 2x2 grid
+  if (allWraps.length <= 2) {
+    // Opponent first, me second
+    [...allWraps].reverse().forEach(w => {
+      const wrap = document.createElement('div');
+      wrap.className = 'result-card-wrap';
+      wrap.innerHTML = `<div class="result-card-label ${w.labelCls}">${w.label}</div>
+        ${buildCard(w.card, { clickable:false, selected:statKey, result:'show', rankClass:w.rc, isMyCard:false })}`;
+      if (!w.isMe) wrap.firstElementChild.nextElementSibling?.classList.add('card-revealed');
+      cardsArea.appendChild(wrap);
+    });
+  } else {
+    // Multi-card grid
+    const grid = document.createElement('div');
+    grid.className = 'result-multi-cards';
+    allWraps.forEach(w => {
+      const wrap = document.createElement('div');
+      wrap.className = 'result-card-wrap';
+      // For multi-card use compact card — just show top stats
+      wrap.innerHTML = `<div class="result-card-label ${w.labelCls}" style="font-size:9px">${w.label}</div>
+        ${buildCard(w.card, { clickable:false, selected:statKey, result:'show', rankClass:w.rc, isMyCard:false })}`;
+      if (!w.isMe) wrap.querySelector('.cricket-card')?.classList.add('card-revealed');
+      grid.appendChild(wrap);
+    });
+    cardsArea.appendChild(grid);
+  }
+
+  // Next picker note
+  if (!isLastRound) {
+    const amNext = (mode==='ai') ? nextPickerIndex===0 : nextPickerIndex===G.myIndex;
+    noteEl.textContent = amNext ? '⚡ You pick next round!' : `${nextPickerName} picks next round`;
+    noteEl.classList.remove('hidden');
+  } else {
+    noteEl.classList.add('hidden');
+  }
+
+  // Next button
+  if (isLastRound) {
+    nextBtn.textContent = '🏁 SEE FINAL RESULT';
+    nextBtn.onclick = () => {
+      document.getElementById('result-overlay').classList.add('hidden');
+      if (mode === 'ai') {
+        showFinalResult(null, G.myIndex);
+      }
+    };
+  } else {
+    nextBtn.textContent = 'NEXT ROUND ▶';
+    nextBtn.onclick = handleNextRound;
   }
 
   document.getElementById('result-overlay').classList.remove('hidden');
+  document.getElementById('result-overlay').scrollTop = 0;
 }
 
-function ackNext() {
-  if (STATE.ackedNext) return;
-  STATE.ackedNext = true;
+function handleNextRound() {
+  if (G.mode === 'ai') {
+    document.getElementById('result-overlay').classList.add('hidden');
+    G.round++;
+    if (G.round >= TOTAL_ROUNDS) {
+      showFinalResult(null, 0);
+    } else {
+      aiRenderRound();
+    }
+    return;
+  }
+  if (G.ackedNext) return;
+  G.ackedNext = true;
   document.getElementById('result-next-btn').classList.add('hidden');
   document.getElementById('waiting-next-msg').classList.remove('hidden');
   socket.emit('round:next');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // FINAL RESULT
-// ═══════════════════════════════════════════════════════════════════════════════
-function showFinalResult(iWon, isDraw, scores, youAre) {
+// ═══════════════════════════════════════════════════════════════════
+function showFinalResult(finalRanking, myIndex) {
   document.getElementById('result-overlay').classList.add('hidden');
-  document.getElementById('final-score-me').textContent  = youAre === 'p1' ? scores.p1 : scores.p2;
-  document.getElementById('final-score-opp').textContent = youAre === 'p1' ? scores.p2 : scores.p1;
-  document.getElementById('rematch-notice').classList.add('hidden');
+
+  // Build ranking from G.players if no server ranking provided
+  let ranking = finalRanking;
+  if (!ranking) {
+    ranking = [...G.players].sort((a,b)=>b.score-a.score).map(p=>({
+      name: p.name, socketId: p.socketId, score: p.score,
+    }));
+  }
+
+  const mySocketId = G.mode==='ai' ? 'player' : socket?.id;
+  const myRank  = ranking.findIndex(r => r.socketId === mySocketId);
+  const iWon    = myRank === 0;
+  const isDraw  = ranking.filter(r=>r.score===ranking[0].score).length > 1;
 
   const trophy = document.getElementById('final-trophy');
   const text   = document.getElementById('final-result-text');
+  if (iWon && !isDraw) { trophy.textContent='🏆'; text.textContent='YOU WON!';        text.className='final-result-text win'; }
+  else if (isDraw)     { trophy.textContent='🤝'; text.textContent='MATCH DRAWN!';    text.className='final-result-text draw'; }
+  else                 { trophy.textContent='😞'; text.textContent='BETTER LUCK NEXT!'; text.className='final-result-text lose'; }
 
-  if (isDraw) {
-    trophy.textContent = '🤝';
-    text.textContent   = 'MATCH DRAWN!';
-    text.className     = 'final-result-text draw';
-  } else if (iWon) {
-    trophy.textContent = '🏆';
-    text.textContent   = 'YOU WON THE MATCH!';
-    text.className     = 'final-result-text win';
-  } else {
-    trophy.textContent = '😞';
-    text.textContent   = 'OPPONENT WON!';
-    text.className     = 'final-result-text lose';
-  }
+  // Leaderboard
+  const lb = document.getElementById('final-leaderboard');
+  lb.innerHTML = ranking.map((r, i) => {
+    const isMe = r.socketId === mySocketId;
+    return `<div class="final-rank-row rank-${i+1}${isMe?' me':''}">
+      <div class="final-medal">${MEDALS[i]||'▫️'}</div>
+      <div class="final-rank-name">${isMe?'YOU 👈':r.name}</div>
+      <div class="final-rank-score">${r.score}<span style="font-size:14px;letter-spacing:1px;margin-left:3px;color:var(--gray)">${ranking.length<=2?"WINS":"PTS"}</span></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('rematch-notice').classList.add('hidden');
+  const btn = document.getElementById('btn-play-again');
+  btn.textContent = '🔄 PLAY AGAIN';
+  btn.disabled    = false;
+  btn.onclick     = playAgain;
 
   showPage('page-final');
 }
 
-function requestRematch() {
-  socket.emit('game:playAgain');
-  document.getElementById('btn-rematch').textContent = '⏳ WAITING…';
-  document.getElementById('btn-rematch').disabled = true;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CARD RENDERER
-// ═══════════════════════════════════════════════════════════════════════════════
-function displayStatValue(card, statKey) {
-  if (statKey === 'bestBowling') {
-    if (!card.bestBowlingWickets && !card.bestBowlingRuns) return '—';
-    return `${card.bestBowlingWickets}/${card.bestBowlingRuns}`;
+function playAgain() {
+  if (G.mode==='ai') startAIGame();
+  else {
+    socket.emit('game:playAgain');
+    document.getElementById('btn-play-again').textContent = '⏳ WAITING…';
+    document.getElementById('btn-play-again').disabled = true;
   }
-  const v = card[statKey];
-  return (v === undefined || v === null) ? '—' : v;
 }
 
-function countryClass(country) {
-  return 'country-' + (country || '').replace(/ /g, '-');
-}
+// ═══════════════════════════════════════════════════════════════════
+// ODI CARD DATA — 40 cards (10 per player for 4-player support)
+// Snapshot: May 2026 | Sources: ESPNcricinfo, myKhel, Wisden, Cricbuzz
+//
+// IMAGE FIELDS (future use):
+//   avatarUrl: null        → set to image URL when ready, e.g. '/img/sachin.webp'
+//   avatarAlt: null        → set to descriptive alt text, e.g. 'Sachin Tendulkar batting'
+//
+// When avatarUrl is set, the card will display the photo instead of the silhouette.
+// Recommended image: 160x90px or similar landscape crop, player from waist up.
+// ═══════════════════════════════════════════════════════════════════
+const ODI_CARDS = [
+  { id:"sachin_tendulkar_odi", name:"Sachin Tendulkar", country:"India", role:"Batter", rarity:"Legendary", matches:463, runs:18426, fours:2016, sixes:195, fifties:96, hundreds:49, highestScore:200, strikeRate:86.23, bestBowlingWickets:5, bestBowlingRuns:32, economyRate:5.10, wickets:154, catches:140, stumpings:0 },
+  { id:"ms_dhoni_odi", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary", matches:350, runs:10773, fours:826, sixes:229, fifties:73, hundreds:10, highestScore:183, strikeRate:87.56, bestBowlingWickets:1, bestBowlingRuns:14, economyRate:5.93, wickets:1, catches:321, stumpings:123 },
+  { id:"virat_kohli_odi", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", matches:302, runs:14557, fours:1310, sixes:155, fifties:74, hundreds:54, highestScore:183, strikeRate:93.62, bestBowlingWickets:4, bestBowlingRuns:13, economyRate:6.39, wickets:4, catches:150, stumpings:0 },
+  { id:"rohit_sharma_odi", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", matches:282, runs:11577, fours:1090, sixes:357, fifties:57, hundreds:32, highestScore:264, strikeRate:89.80, bestBowlingWickets:2, bestBowlingRuns:9, economyRate:5.42, wickets:8, catches:115, stumpings:0 },
+  { id:"sourav_ganguly_odi", name:"Sourav Ganguly", country:"India", role:"All-rounder", rarity:"Epic", matches:311, runs:11363, fours:1122, sixes:190, fifties:72, hundreds:22, highestScore:183, strikeRate:73.70, bestBowlingWickets:5, bestBowlingRuns:16, economyRate:4.37, wickets:100, catches:100, stumpings:0 },
+  { id:"yuvraj_singh_odi", name:"Yuvraj Singh", country:"India", role:"All-rounder", rarity:"Epic", matches:304, runs:8701, fours:779, sixes:284, fifties:52, hundreds:14, highestScore:150, strikeRate:87.66, bestBowlingWickets:5, bestBowlingRuns:31, economyRate:5.02, wickets:111, catches:89, stumpings:0 },
+  { id:"jasprit_bumrah_odi", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary", matches:89, runs:65, fours:3, sixes:2, fifties:0, hundreds:0, highestScore:10, strikeRate:62.00, bestBowlingWickets:6, bestBowlingRuns:19, economyRate:4.60, wickets:149, catches:18, stumpings:0 },
+  { id:"ricky_ponting_odi", name:"Ricky Ponting", country:"Australia", role:"Batter", rarity:"Legendary", matches:375, runs:13704, fours:1231, sixes:163, fifties:82, hundreds:30, highestScore:164, strikeRate:80.39, bestBowlingWickets:3, bestBowlingRuns:0, economyRate:4.73, wickets:3, catches:160, stumpings:0 },
+  { id:"adam_gilchrist_odi", name:"Adam Gilchrist", country:"Australia", role:"Wicket-keeper", rarity:"Legendary", matches:287, runs:9619, fours:1000, sixes:149, fifties:55, hundreds:16, highestScore:172, strikeRate:96.94, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:417, stumpings:55 },
+  { id:"brett_lee_odi", name:"Brett Lee", country:"Australia", role:"Bowler", rarity:"Epic", matches:221, runs:950, fours:59, sixes:32, fifties:2, hundreds:0, highestScore:52, strikeRate:83.04, bestBowlingWickets:5, bestBowlingRuns:22, economyRate:4.76, wickets:380, catches:49, stumpings:0 },
+  { id:"shane_warne_odi", name:"Shane Warne", country:"Australia", role:"Bowler", rarity:"Legendary", matches:194, runs:1018, fours:78, sixes:8, fifties:1, hundreds:0, highestScore:55, strikeRate:68.92, bestBowlingWickets:5, bestBowlingRuns:33, economyRate:4.25, wickets:293, catches:80, stumpings:0 },
+  { id:"mitchell_starc_odi", name:"Mitchell Starc", country:"Australia", role:"Bowler", rarity:"Epic", matches:130, runs:620, fours:35, sixes:18, fifties:0, hundreds:0, highestScore:52, strikeRate:91.00, bestBowlingWickets:6, bestBowlingRuns:28, economyRate:5.27, wickets:247, catches:26, stumpings:0 },
+  { id:"steve_smith_odi", name:"Steve Smith", country:"Australia", role:"Batter", rarity:"Epic", matches:170, runs:5431, fours:439, sixes:67, fifties:36, hundreds:13, highestScore:164, strikeRate:86.55, bestBowlingWickets:3, bestBowlingRuns:26, economyRate:5.88, wickets:31, catches:83, stumpings:0 },
+  { id:"david_warner_odi", name:"David Warner", country:"Australia", role:"Batter", rarity:"Epic", matches:161, runs:6932, fours:693, sixes:189, fifties:33, hundreds:22, highestScore:179, strikeRate:95.97, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:71, stumpings:0 },
+  { id:"ben_stokes_odi", name:"Ben Stokes", country:"England", role:"All-rounder", rarity:"Epic", matches:114, runs:3463, fours:282, sixes:109, fifties:21, hundreds:3, highestScore:102, strikeRate:95.09, bestBowlingWickets:5, bestBowlingRuns:61, economyRate:6.19, wickets:74, catches:43, stumpings:0 },
+  { id:"andrew_flintoff_odi", name:"Andrew Flintoff", country:"England", role:"All-rounder", rarity:"Epic", matches:141, runs:3394, fours:318, sixes:72, fifties:18, hundreds:3, highestScore:123, strikeRate:87.22, bestBowlingWickets:5, bestBowlingRuns:19, economyRate:4.89, wickets:169, catches:38, stumpings:0 },
+  { id:"eoin_morgan_odi", name:"Eoin Morgan", country:"England", role:"Batter", rarity:"Rare", matches:248, runs:7701, fours:631, sixes:220, fifties:45, hundreds:13, highestScore:148, strikeRate:87.57, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:90, stumpings:0 },
+  { id:"joe_root_odi", name:"Joe Root", country:"England", role:"Batter", rarity:"Epic", matches:174, runs:6977, fours:700, sixes:62, fifties:55, hundreds:16, highestScore:133, strikeRate:87.21, bestBowlingWickets:3, bestBowlingRuns:52, economyRate:5.71, wickets:20, catches:93, stumpings:0 },
+  { id:"ab_devilliers_odi", name:"AB de Villiers", country:"South Africa", role:"Batter", rarity:"Legendary", matches:228, runs:9577, fours:839, sixes:204, fifties:53, hundreds:25, highestScore:176, strikeRate:101.10, bestBowlingWickets:1, bestBowlingRuns:47, economyRate:6.39, wickets:1, catches:232, stumpings:1 },
+  { id:"shaun_pollock_odi", name:"Shaun Pollock", country:"South Africa", role:"All-rounder", rarity:"Epic", matches:303, runs:3519, fours:273, sixes:15, fifties:14, hundreds:0, highestScore:130, strikeRate:70.63, bestBowlingWickets:6, bestBowlingRuns:35, economyRate:3.67, wickets:393, catches:112, stumpings:0 },
+  { id:"hashim_amla_odi", name:"Hashim Amla", country:"South Africa", role:"Batter", rarity:"Epic", matches:181, runs:8113, fours:835, sixes:64, fifties:48, hundreds:27, highestScore:159, strikeRate:88.93, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:60, stumpings:0 },
+  { id:"jacques_kallis_odi", name:"Jacques Kallis", country:"South Africa", role:"All-rounder", rarity:"Legendary", matches:328, runs:11579, fours:1107, sixes:98, fifties:86, hundreds:17, highestScore:139, strikeRate:72.89, bestBowlingWickets:5, bestBowlingRuns:30, economyRate:4.06, wickets:273, catches:200, stumpings:0 },
+  { id:"wasim_akram_odi", name:"Wasim Akram", country:"Pakistan", role:"Bowler", rarity:"Legendary", matches:356, runs:3717, fours:263, sixes:72, fifties:6, hundreds:3, highestScore:86, strikeRate:86.09, bestBowlingWickets:5, bestBowlingRuns:15, economyRate:3.89, wickets:502, catches:88, stumpings:0 },
+  { id:"shahid_afridi_odi", name:"Shahid Afridi", country:"Pakistan", role:"All-rounder", rarity:"Legendary", matches:398, runs:8064, fours:687, sixes:351, fifties:39, hundreds:6, highestScore:124, strikeRate:117.00, bestBowlingWickets:7, bestBowlingRuns:12, economyRate:4.62, wickets:395, catches:125, stumpings:0 },
+  { id:"babar_azam_odi", name:"Babar Azam", country:"Pakistan", role:"Batter", rarity:"Epic", matches:140, runs:6501, fours:601, sixes:68, fifties:43, hundreds:20, highestScore:158, strikeRate:87.89, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:46, stumpings:0 },
+  { id:"waqar_younis_odi", name:"Waqar Younis", country:"Pakistan", role:"Bowler", rarity:"Epic", matches:262, runs:1010, fours:73, sixes:22, fifties:0, hundreds:0, highestScore:37, strikeRate:70.00, bestBowlingWickets:7, bestBowlingRuns:36, economyRate:4.68, wickets:416, catches:39, stumpings:0 },
+  { id:"brian_lara_odi", name:"Brian Lara", country:"West Indies", role:"Batter", rarity:"Legendary", matches:299, runs:10405, fours:1058, sixes:97, fifties:63, hundreds:19, highestScore:169, strikeRate:79.29, bestBowlingWickets:4, bestBowlingRuns:37, economyRate:5.29, wickets:4, catches:120, stumpings:0 },
+  { id:"chris_gayle_odi", name:"Chris Gayle", country:"West Indies", role:"Batter", rarity:"Legendary", matches:301, runs:10480, fours:1002, sixes:331, fifties:54, hundreds:25, highestScore:215, strikeRate:85.90, bestBowlingWickets:3, bestBowlingRuns:30, economyRate:5.05, wickets:167, catches:91, stumpings:0 },
+  { id:"viv_richards_odi", name:"Viv Richards", country:"West Indies", role:"Batter", rarity:"Legendary", matches:187, runs:6721, fours:590, sixes:118, fifties:45, hundreds:11, highestScore:189, strikeRate:90.20, bestBowlingWickets:6, bestBowlingRuns:41, economyRate:4.98, wickets:118, catches:101, stumpings:0 },
+  { id:"courtney_walsh_odi", name:"Courtney Walsh", country:"West Indies", role:"Bowler", rarity:"Rare", matches:205, runs:297, fours:14, sixes:2, fifties:0, hundreds:0, highestScore:30, strikeRate:44.67, bestBowlingWickets:5, bestBowlingRuns:1, economyRate:3.99, wickets:227, catches:32, stumpings:0 },
+  { id:"brendon_mccullum_odi", name:"Brendon McCullum", country:"New Zealand", role:"Wicket-keeper", rarity:"Epic", matches:260, runs:6083, fours:537, sixes:200, fifties:30, hundreds:5, highestScore:166, strikeRate:96.98, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:377, stumpings:24 },
+  { id:"kane_williamson_odi", name:"Kane Williamson", country:"New Zealand", role:"Batter", rarity:"Epic", matches:163, runs:6555, fours:610, sixes:63, fifties:46, hundreds:13, highestScore:148, strikeRate:81.30, bestBowlingWickets:4, bestBowlingRuns:22, economyRate:5.00, wickets:37, catches:67, stumpings:0 },
+  { id:"trent_boult_odi", name:"Trent Boult", country:"New Zealand", role:"Bowler", rarity:"Rare", matches:114, runs:280, fours:20, sixes:7, fifties:0, hundreds:0, highestScore:26, strikeRate:63.02, bestBowlingWickets:7, bestBowlingRuns:34, economyRate:5.00, wickets:211, catches:38, stumpings:0 },
+  { id:"kumar_sangakkara_odi", name:"Kumar Sangakkara", country:"Sri Lanka", role:"Wicket-keeper", rarity:"Legendary", matches:404, runs:14234, fours:1382, sixes:99, fifties:93, hundreds:25, highestScore:169, strikeRate:78.86, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:402, stumpings:99 },
+  { id:"muttiah_muralitharan_odi", name:"Muttiah Muralitharan", country:"Sri Lanka", role:"Bowler", rarity:"Legendary", matches:350, runs:674, fours:45, sixes:4, fifties:0, hundreds:0, highestScore:33, strikeRate:58.98, bestBowlingWickets:7, bestBowlingRuns:30, economyRate:3.93, wickets:534, catches:131, stumpings:0 },
+  { id:"lasith_malinga_odi", name:"Lasith Malinga", country:"Sri Lanka", role:"Bowler", rarity:"Epic", matches:226, runs:805, fours:49, sixes:29, fifties:0, hundreds:0, highestScore:56, strikeRate:91.39, bestBowlingWickets:6, bestBowlingRuns:38, economyRate:5.24, wickets:338, catches:34, stumpings:0 },
+  { id:"sanath_jayasuriya_odi", name:"Sanath Jayasuriya", country:"Sri Lanka", role:"All-rounder", rarity:"Legendary", matches:445, runs:13430, fours:1500, sixes:270, fifties:68, hundreds:28, highestScore:189, strikeRate:91.20, bestBowlingWickets:6, bestBowlingRuns:29, economyRate:4.78, wickets:323, catches:123, stumpings:0 },
+  { id:"shakib_al_hasan_odi", name:"Shakib Al Hasan", country:"Bangladesh", role:"All-rounder", rarity:"Epic", matches:247, runs:7570, fours:699, sixes:54, fifties:54, hundreds:9, highestScore:134, strikeRate:82.92, bestBowlingWickets:6, bestBowlingRuns:55, economyRate:4.45, wickets:299, catches:82, stumpings:0 },
+  { id:"tamim_iqbal_odi", name:"Tamim Iqbal", country:"Bangladesh", role:"Batter", rarity:"Rare", matches:240, runs:8357, fours:906, sixes:107, fifties:56, hundreds:14, highestScore:158, strikeRate:80.68, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:63, stumpings:0 },
+  { id:"rashid_khan_odi", name:"Rashid Khan", country:"Afghanistan", role:"Bowler", rarity:"Epic", matches:117, runs:1106, fours:104, sixes:37, fifties:3, hundreds:0, highestScore:60, strikeRate:103.50, bestBowlingWickets:7, bestBowlingRuns:18, economyRate:4.21, wickets:210, catches:28, stumpings:0 },
+];
 
-function renderCard(card, { isPlayer = true, selectedStat = null, revealResult = null, clickable = true } = {}) {
-  if (!card) return '';
-  const initials   = card.name.split(' ').map(w => w[0]).join('').substring(0, 3);
-  const rarityClass = 'rarity-' + card.rarity.toLowerCase();
+// ═══════════════════════════════════════════════════════════════════
+// IPL CARDS — 100 players, career stats through IPL 2025
+//
+// DATA NOTE:
+// Stats compiled from ESPNcricinfo, cricket365.com, sportskeeda.com,
+// cricjosh.in, fantasykhiladi.com, howzat.com — May 2026 snapshot.
+// IPL stats differ from ODI/Test — these are T20 franchise career totals.
+// bestBowlingWickets/Runs = best figures in a single IPL innings.
+// economyRate = career IPL economy.
+// Replace with verified stats from iplt20.com/ESPNcricinfo before release.
+//
+// IMAGE FIELDS: set avatarUrl when player images are available.
+// ═══════════════════════════════════════════════════════════════════
+const IPL_CARDS = [
 
-  let statsHtml = '';
-  STAT_CONFIG.forEach(sc => {
-    const val = displayStatValue(card, sc.key);
-    let extraClass = '';
-    if (selectedStat === sc.key) extraClass += ' selected';
-    if (revealResult && selectedStat === sc.key) {
-      const w = revealResult.winner;
-      if (isPlayer) {
-        if (w === 'player') extraClass += ' won';
-        else if (w === 'draw') extraClass += ' drawn';
-        else extraClass += ' lost';
-      } else {
-        if (w === 'ai') extraClass += ' won';
-        else if (w === 'draw') extraClass += ' drawn';
-        else extraClass += ' lost';
-      }
-    }
-    const clickAttr   = (isPlayer && clickable) ? `onclick="selectStat('${sc.key}')"` : '';
-    const disabledCls = (!isPlayer || !clickable) ? ' disabled-stat' : '';
+  // ── TOP RUN SCORERS ───────────────────────────────────────────────
+  { id:"virat_kohli_ipl", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary",
+    team:"RCB", avatarUrl:null, avatarAlt:null,
+    matches:281, runs:9012, fours:785, sixes:297,
+    fifties:67, hundreds:8, highestScore:113,
+    strikeRate:134.39,
+    bestBowlingWickets:1, bestBowlingRuns:13, economyRate:8.10, wickets:4, catches:141, stumpings:0 },
 
-    statsHtml += `
-      <button class="stat-btn${extraClass}${disabledCls}" ${clickAttr}>
-        <span class="stat-label">${sc.label}</span>
-        <span class="stat-value${selectedStat === sc.key ? ' highlight' : ''}">${val}</span>
-      </button>`;
-  });
+  { id:"rohit_sharma_ipl", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:276, runs:7183, fours:651, sixes:309,
+    fifties:49, hundreds:2, highestScore:109,
+    strikeRate:133.01,
+    bestBowlingWickets:2, bestBowlingRuns:14, economyRate:8.20, wickets:15, catches:110, stumpings:0 },
 
-  return `
-    <div class="cricket-card ${rarityClass}">
-      <div class="card-header">
-        <div>
-          <div class="card-player-name">${card.name}</div>
-          <div class="card-country-role">${card.country} · ${card.role}</div>
-        </div>
-        <div class="rarity-badge ${rarityClass}">${card.rarity.toUpperCase()}</div>
-      </div>
-      <div class="card-avatar">
-        <div class="player-silhouette">🏏</div>
-        <div class="player-initials">${initials}</div>
-      </div>
-      <div class="country-strip ${countryClass(card.country)}"></div>
-      <div class="card-stats">
-        <div class="stat-scroll">${statsHtml}</div>
-      </div>
-    </div>`;
-}
+  { id:"shikhar_dhawan_ipl", name:"Shikhar Dhawan", country:"India", role:"Batter", rarity:"Epic",
+    team:"DC/SRH/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:222, runs:6769, fours:768, sixes:152,
+    fifties:51, hundreds:2, highestScore:106,
+    strikeRate:127.14,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:88, stumpings:0 },
+
+  { id:"david_warner_ipl", name:"David Warner", country:"Australia", role:"Batter", rarity:"Legendary",
+    team:"SRH/DC", avatarUrl:null, avatarAlt:null,
+    matches:184, runs:6565, fours:663, sixes:236,
+    fifties:57, hundreds:4, highestScore:126,
+    strikeRate:139.77,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:71, stumpings:0 },
+
+  { id:"suresh_raina_ipl", name:"Suresh Raina", country:"India", role:"Batter", rarity:"Legendary",
+    team:"CSK/GL", avatarUrl:null, avatarAlt:null,
+    matches:205, runs:5528, fours:564, sixes:185,
+    fifties:38, hundreds:1, highestScore:100,
+    strikeRate:136.76,
+    bestBowlingWickets:3, bestBowlingRuns:12, economyRate:8.32, wickets:36, catches:109, stumpings:0 },
+
+  { id:"ms_dhoni_ipl", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary",
+    team:"CSK", avatarUrl:null, avatarAlt:null,
+    matches:278, runs:5439, fours:383, sixes:264,
+    fifties:27, hundreds:0, highestScore:84,
+    strikeRate:136.08,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:175, stumpings:47 },
+
+  { id:"ab_devilliers_ipl", name:"AB de Villiers", country:"South Africa", role:"Batter", rarity:"Legendary",
+    team:"RCB", avatarUrl:null, avatarAlt:null,
+    matches:184, runs:5162, fours:392, sixes:251,
+    fifties:36, hundreds:3, highestScore:133,
+    strikeRate:151.68,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:147, stumpings:0 },
+
+  { id:"kl_rahul_ipl", name:"KL Rahul", country:"India", role:"Wicket-keeper", rarity:"Epic",
+    team:"RCB/PBKS/LSG", avatarUrl:null, avatarAlt:null,
+    matches:132, runs:4683, fours:428, sixes:154,
+    fifties:42, hundreds:4, highestScore:132,
+    strikeRate:136.47,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:105, stumpings:27 },
+
+  { id:"chris_gayle_ipl", name:"Chris Gayle", country:"West Indies", role:"Batter", rarity:"Legendary",
+    team:"KKR/RCB/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:142, runs:4965, fours:437, sixes:357,
+    fifties:30, hundreds:6, highestScore:175,
+    strikeRate:149.72,
+    bestBowlingWickets:3, bestBowlingRuns:15, economyRate:7.81, wickets:22, catches:52, stumpings:0 },
+
+  { id:"ambati_rayudu_ipl", name:"Ambati Rayudu", country:"India", role:"Batter", rarity:"Rare",
+    team:"MI/CSK", avatarUrl:null, avatarAlt:null,
+    matches:188, runs:4350, fours:382, sixes:165,
+    fifties:30, hundreds:2, highestScore:100,
+    strikeRate:131.20,
+    bestBowlingWickets:2, bestBowlingRuns:14, economyRate:8.60, wickets:8, catches:75, stumpings:6 },
+
+  { id:"gautam_gambhir_ipl", name:"Gautam Gambhir", country:"India", role:"Batter", rarity:"Epic",
+    team:"DC/KKR", avatarUrl:null, avatarAlt:null,
+    matches:154, runs:4217, fours:503, sixes:82,
+    fifties:36, hundreds:0, highestScore:93,
+    strikeRate:123.88,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:55, stumpings:0 },
+
+  { id:"ajinkya_rahane_ipl", name:"Ajinkya Rahane", country:"India", role:"Batter", rarity:"Rare",
+    team:"RR/RPS/PBKS/KKR/CSK/DC", avatarUrl:null, avatarAlt:null,
+    matches:167, runs:4173, fours:431, sixes:61,
+    fifties:30, hundreds:1, highestScore:105,
+    strikeRate:120.92,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:82, stumpings:0 },
+
+  { id:"rishabh_pant_ipl", name:"Rishabh Pant", country:"India", role:"Wicket-keeper", rarity:"Epic",
+    team:"DC/LSG", avatarUrl:null, avatarAlt:null,
+    matches:111, runs:3284, fours:265, sixes:153,
+    fifties:18, hundreds:1, highestScore:128,
+    strikeRate:147.95,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:96, stumpings:17 },
+
+  { id:"faf_du_plessis_ipl", name:"Faf du Plessis", country:"South Africa", role:"Batter", rarity:"Epic",
+    team:"CSK/RPS/RCB", avatarUrl:null, avatarAlt:null,
+    matches:143, runs:4263, fours:398, sixes:123,
+    fifties:27, hundreds:3, highestScore:96,
+    strikeRate:131.77,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:71, stumpings:0 },
+
+  { id:"shane_watson_ipl", name:"Shane Watson", country:"Australia", role:"All-rounder", rarity:"Epic",
+    team:"RR/CSK", avatarUrl:null, avatarAlt:null,
+    matches:145, runs:3874, fours:417, sixes:143,
+    fifties:26, hundreds:4, highestScore:117,
+    strikeRate:137.69,
+    bestBowlingWickets:4, bestBowlingRuns:20, economyRate:8.24, wickets:92, catches:68, stumpings:0 },
+
+  { id:"dinesh_karthik_ipl", name:"Dinesh Karthik", country:"India", role:"Wicket-keeper", rarity:"Rare",
+    team:"DC/KKR/PBKS/MIM/RCB", avatarUrl:null, avatarAlt:null,
+    matches:257, runs:4843, fours:441, sixes:200,
+    fifties:25, hundreds:0, highestScore:83,
+    strikeRate:134.67,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:166, stumpings:28 },
+
+  { id:"virender_sehwag_ipl", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Epic",
+    team:"DC/KXIP", avatarUrl:null, avatarAlt:null,
+    matches:104, runs:2728, fours:336, sixes:94,
+    fifties:13, hundreds:1, highestScore:122,
+    strikeRate:153.78,
+    bestBowlingWickets:3, bestBowlingRuns:9, economyRate:8.78, wickets:11, catches:45, stumpings:0 },
+
+  { id:"ishan_kishan_ipl", name:"Ishan Kishan", country:"India", role:"Wicket-keeper", rarity:"Rare",
+    team:"MI/GT", avatarUrl:null, avatarAlt:null,
+    matches:105, runs:2644, fours:222, sixes:131,
+    fifties:17, hundreds:1, highestScore:99,
+    strikeRate:136.21,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:68, stumpings:22 },
+
+  { id:"shubman_gill_ipl", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic",
+    team:"KKR/GT", avatarUrl:null, avatarAlt:null,
+    matches:101, runs:3080, fours:286, sixes:79,
+    fifties:23, hundreds:3, highestScore:129,
+    strikeRate:135.46,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:33, stumpings:0 },
+
+  { id:"quinton_de_kock_ipl", name:"Quinton de Kock", country:"South Africa", role:"Wicket-keeper", rarity:"Epic",
+    team:"RCB/MI/LSG", avatarUrl:null, avatarAlt:null,
+    matches:107, runs:3386, fours:340, sixes:115,
+    fifties:23, hundreds:3, highestScore:140,
+    strikeRate:137.06,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:86, stumpings:20 },
+
+  { id:"jos_buttler_ipl", name:"Jos Buttler", country:"England", role:"Wicket-keeper", rarity:"Legendary",
+    team:"MI/RR", avatarUrl:null, avatarAlt:null,
+    matches:111, runs:3582, fours:302, sixes:168,
+    fifties:26, hundreds:7, highestScore:124,
+    strikeRate:148.79,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:76, stumpings:29 },
+
+  { id:"ruturaj_gaikwad_ipl", name:"Ruturaj Gaikwad", country:"India", role:"Batter", rarity:"Epic",
+    team:"CSK", avatarUrl:null, avatarAlt:null,
+    matches:87, runs:2760, fours:278, sixes:80,
+    fifties:20, hundreds:3, highestScore:108,
+    strikeRate:135.16,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:36, stumpings:0 },
+
+  { id:"sanju_samson_ipl", name:"Sanju Samson", country:"India", role:"Wicket-keeper", rarity:"Epic",
+    team:"RR/DC", avatarUrl:null, avatarAlt:null,
+    matches:175, runs:4832, fours:408, sixes:189,
+    fifties:32, hundreds:4, highestScore:119,
+    strikeRate:138.82,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:122, stumpings:29 },
+
+  { id:"devdutt_padikkal_ipl", name:"Devdutt Padikkal", country:"India", role:"Batter", rarity:"Rare",
+    team:"RCB/RR/LSG/DC", avatarUrl:null, avatarAlt:null,
+    matches:75, runs:1857, fours:184, sixes:55,
+    fifties:14, hundreds:2, highestScore:101,
+    strikeRate:130.63,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:29, stumpings:0 },
+
+  { id:"suryakumar_yadav_ipl", name:"Suryakumar Yadav", country:"India", role:"Batter", rarity:"Epic",
+    team:"KKR/MI", avatarUrl:null, avatarAlt:null,
+    matches:177, runs:4166, fours:355, sixes:201,
+    fifties:26, hundreds:2, highestScore:103,
+    strikeRate:144.13,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:79, stumpings:0 },
+
+  { id:"glenn_maxwell_ipl", name:"Glenn Maxwell", country:"Australia", role:"All-rounder", rarity:"Epic",
+    team:"DC/MI/PBKS/RCB", avatarUrl:null, avatarAlt:null,
+    matches:120, runs:2760, fours:212, sixes:151,
+    fifties:14, hundreds:1, highestScore:95,
+    strikeRate:154.26,
+    bestBowlingWickets:4, bestBowlingRuns:27, economyRate:8.21, wickets:30, catches:52, stumpings:0 },
+
+  // ── ALL-ROUNDERS ──────────────────────────────────────────────────
+  { id:"hardik_pandya_ipl", name:"Hardik Pandya", country:"India", role:"All-rounder", rarity:"Legendary",
+    team:"MI/GT", avatarUrl:null, avatarAlt:null,
+    matches:148, runs:2800, fours:214, sixes:159,
+    fifties:14, hundreds:0, highestScore:91,
+    strikeRate:147.24,
+    bestBowlingWickets:4, bestBowlingRuns:24, economyRate:9.07, wickets:80, catches:59, stumpings:0 },
+
+  { id:"andre_russell_ipl", name:"Andre Russell", country:"West Indies", role:"All-rounder", rarity:"Legendary",
+    team:"KKR", avatarUrl:null, avatarAlt:null,
+    matches:125, runs:2836, fours:175, sixes:249,
+    fifties:10, hundreds:0, highestScore:88,
+    strikeRate:177.84,
+    bestBowlingWickets:5, bestBowlingRuns:15, economyRate:9.34, wickets:91, catches:42, stumpings:0 },
+
+  { id:"sunil_narine_ipl", name:"Sunil Narine", country:"West Indies", role:"All-rounder", rarity:"Legendary",
+    team:"KKR", avatarUrl:null, avatarAlt:null,
+    matches:179, runs:1798, fours:142, sixes:106,
+    fifties:8, hundreds:1, highestScore:109,
+    strikeRate:162.83,
+    bestBowlingWickets:5, bestBowlingRuns:19, economyRate:6.78, wickets:192, catches:78, stumpings:0 },
+
+  { id:"kieron_pollard_ipl", name:"Kieron Pollard", country:"West Indies", role:"All-rounder", rarity:"Legendary",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:189, runs:3412, fours:219, sixes:223,
+    fifties:16, hundreds:0, highestScore:87,
+    strikeRate:147.32,
+    bestBowlingWickets:4, bestBowlingRuns:22, economyRate:9.21, wickets:69, catches:75, stumpings:0 },
+
+  { id:"ravindra_jadeja_ipl", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Epic",
+    team:"RR/CSK", avatarUrl:null, avatarAlt:null,
+    matches:254, runs:2777, fours:198, sixes:99,
+    fifties:3, hundreds:0, highestScore:62,
+    strikeRate:127.84,
+    bestBowlingWickets:5, bestBowlingRuns:16, economyRate:7.67, wickets:170, catches:110, stumpings:0 },
+
+  { id:"dwayne_bravo_ipl", name:"Dwayne Bravo", country:"West Indies", role:"All-rounder", rarity:"Epic",
+    team:"CSK/GL/MI", avatarUrl:null, avatarAlt:null,
+    matches:161, runs:1452, fours:96, sixes:73,
+    fifties:2, hundreds:0, highestScore:68,
+    strikeRate:130.89,
+    bestBowlingWickets:4, bestBowlingRuns:22, economyRate:8.38, wickets:183, catches:53, stumpings:0 },
+
+  { id:"mitchell_marsh_ipl", name:"Mitchell Marsh", country:"Australia", role:"All-rounder", rarity:"Rare",
+    team:"PBKS/SRH/DC", avatarUrl:null, avatarAlt:null,
+    matches:77, runs:1614, fours:148, sixes:79,
+    fifties:9, hundreds:1, highestScore:89,
+    strikeRate:139.66,
+    bestBowlingWickets:3, bestBowlingRuns:14, economyRate:9.42, wickets:27, catches:28, stumpings:0 },
+
+  { id:"irfan_pathan_ipl", name:"Irfan Pathan", country:"India", role:"All-rounder", rarity:"Rare",
+    team:"KKR/RPS/SRH", avatarUrl:null, avatarAlt:null,
+    matches:94, runs:977, fours:89, sixes:30,
+    fifties:2, hundreds:0, highestScore:54,
+    strikeRate:127.32,
+    bestBowlingWickets:4, bestBowlingRuns:14, economyRate:8.22, wickets:65, catches:34, stumpings:0 },
+
+  { id:"ben_stokes_ipl", name:"Ben Stokes", country:"England", role:"All-rounder", rarity:"Epic",
+    team:"RR/CSK", avatarUrl:null, avatarAlt:null,
+    matches:43, runs:920, fours:74, sixes:51,
+    fifties:5, hundreds:1, highestScore:107,
+    strikeRate:136.70,
+    bestBowlingWickets:2, bestBowlingRuns:20, economyRate:9.44, wickets:28, catches:16, stumpings:0 },
+
+  { id:"moeen_ali_ipl", name:"Moeen Ali", country:"England", role:"All-rounder", rarity:"Rare",
+    team:"CSK/RCB", avatarUrl:null, avatarAlt:null,
+    matches:75, runs:1080, fours:78, sixes:66,
+    fifties:4, hundreds:0, highestScore:93,
+    strikeRate:160.47,
+    bestBowlingWickets:3, bestBowlingRuns:12, economyRate:7.61, wickets:53, catches:26, stumpings:0 },
+
+  { id:"marcus_stoinis_ipl", name:"Marcus Stoinis", country:"Australia", role:"All-rounder", rarity:"Rare",
+    team:"RCB/DC/LSG", avatarUrl:null, avatarAlt:null,
+    matches:101, runs:1771, fours:142, sixes:84,
+    fifties:8, hundreds:1, highestScore:65,
+    strikeRate:138.36,
+    bestBowlingWickets:4, bestBowlingRuns:23, economyRate:8.91, wickets:35, catches:37, stumpings:0 },
+
+  { id:"sam_curran_ipl", name:"Sam Curran", country:"England", role:"All-rounder", rarity:"Rare",
+    team:"CSK/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:57, runs:484, fours:32, sixes:27,
+    fifties:1, hundreds:0, highestScore:55,
+    strikeRate:137.10,
+    bestBowlingWickets:5, bestBowlingRuns:10, economyRate:8.94, wickets:60, catches:14, stumpings:0 },
+
+  { id:"krishnappa_gowtham_ipl", name:"K Gowtham", country:"India", role:"All-rounder", rarity:"Common",
+    team:"RR/CSK/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:49, runs:421, fours:27, sixes:26,
+    fifties:1, hundreds:0, highestScore:72,
+    strikeRate:168.40,
+    bestBowlingWickets:3, bestBowlingRuns:9, economyRate:8.88, wickets:35, catches:11, stumpings:0 },
+
+  // ── BOWLERS ───────────────────────────────────────────────────────
+  { id:"yuzvendra_chahal_ipl", name:"Yuzvendra Chahal", country:"India", role:"Bowler", rarity:"Legendary",
+    team:"RCB/RR/MI/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:175, runs:115, fours:5, sixes:3,
+    fifties:0, hundreds:0, highestScore:18,
+    strikeRate:91.27,
+    bestBowlingWickets:5, bestBowlingRuns:40, economyRate:7.84, wickets:221, catches:44, stumpings:0 },
+
+  { id:"jasprit_bumrah_ipl", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:145, runs:55, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:7,
+    strikeRate:55.00,
+    bestBowlingWickets:5, bestBowlingRuns:10, economyRate:7.40, wickets:183, catches:45, stumpings:0 },
+
+  { id:"bhuvneshwar_kumar_ipl", name:"Bhuvneshwar Kumar", country:"India", role:"Bowler", rarity:"Epic",
+    team:"SRH/PWI", avatarUrl:null, avatarAlt:null,
+    matches:177, runs:300, fours:18, sixes:5,
+    fifties:0, hundreds:0, highestScore:23,
+    strikeRate:89.02,
+    bestBowlingWickets:5, bestBowlingRuns:19, economyRate:7.71, wickets:198, catches:39, stumpings:0 },
+
+  { id:"piyush_chawla_ipl", name:"Piyush Chawla", country:"India", role:"Bowler", rarity:"Epic",
+    team:"CSK/KKR/PBKS/MI", avatarUrl:null, avatarAlt:null,
+    matches:192, runs:312, fours:17, sixes:8,
+    fifties:0, hundreds:0, highestScore:20,
+    strikeRate:100.32,
+    bestBowlingWickets:4, bestBowlingRuns:17, economyRate:7.96, wickets:192, catches:52, stumpings:0 },
+
+  { id:"lasith_malinga_ipl", name:"Lasith Malinga", country:"Sri Lanka", role:"Bowler", rarity:"Legendary",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:122, runs:161, fours:9, sixes:5,
+    fifties:0, hundreds:0, highestScore:18,
+    strikeRate:91.47,
+    bestBowlingWickets:5, bestBowlingRuns:13, economyRate:7.14, wickets:170, catches:27, stumpings:0 },
+
+  { id:"amit_mishra_ipl", name:"Amit Mishra", country:"India", role:"Bowler", rarity:"Epic",
+    team:"DC/SRH/LSG", avatarUrl:null, avatarAlt:null,
+    matches:162, runs:142, fours:6, sixes:2,
+    fifties:0, hundreds:0, highestScore:21,
+    strikeRate:87.65,
+    bestBowlingWickets:5, bestBowlingRuns:17, economyRate:7.37, wickets:174, catches:38, stumpings:0 },
+
+  { id:"rashid_khan_ipl", name:"Rashid Khan", country:"Afghanistan", role:"Bowler", rarity:"Legendary",
+    team:"SRH/GT", avatarUrl:null, avatarAlt:null,
+    matches:118, runs:420, fours:23, sixes:18,
+    fifties:0, hundreds:0, highestScore:40,
+    strikeRate:148.94,
+    bestBowlingWickets:4, bestBowlingRuns:7, economyRate:6.33, wickets:158, catches:41, stumpings:0 },
+
+  { id:"harbhajan_singh_ipl", name:"Harbhajan Singh", country:"India", role:"Bowler", rarity:"Epic",
+    team:"MI/CSK/KKR", avatarUrl:null, avatarAlt:null,
+    matches:163, runs:542, fours:34, sixes:11,
+    fifties:1, hundreds:0, highestScore:61,
+    strikeRate:118.34,
+    bestBowlingWickets:5, bestBowlingRuns:18, economyRate:7.05, wickets:150, catches:41, stumpings:0 },
+
+  { id:"ravichandran_ashwin_ipl", name:"R Ashwin", country:"India", role:"Bowler", rarity:"Epic",
+    team:"CSK/PBKS/DC/RR", avatarUrl:null, avatarAlt:null,
+    matches:221, runs:642, fours:41, sixes:11,
+    fifties:0, hundreds:0, highestScore:46,
+    strikeRate:109.02,
+    bestBowlingWickets:4, bestBowlingRuns:34, economyRate:7.20, wickets:187, catches:64, stumpings:0 },
+
+  { id:"kagiso_rabada_ipl", name:"Kagiso Rabada", country:"South Africa", role:"Bowler", rarity:"Epic",
+    team:"DC/PBKS/GT", avatarUrl:null, avatarAlt:null,
+    matches:94, runs:88, fours:4, sixes:2,
+    fifties:0, hundreds:0, highestScore:10,
+    strikeRate:60.27,
+    bestBowlingWickets:4, bestBowlingRuns:21, economyRate:8.68, wickets:130, catches:23, stumpings:0 },
+
+  { id:"trent_boult_ipl", name:"Trent Boult", country:"New Zealand", role:"Bowler", rarity:"Epic",
+    team:"MI/SRH/RR/GT", avatarUrl:null, avatarAlt:null,
+    matches:86, runs:40, fours:1, sixes:1,
+    fifties:0, hundreds:0, highestScore:8,
+    strikeRate:50.63,
+    bestBowlingWickets:4, bestBowlingRuns:18, economyRate:8.26, wickets:105, catches:19, stumpings:0 },
+
+  { id:"alzarri_joseph_ipl", name:"Alzarri Joseph", country:"West Indies", role:"Bowler", rarity:"Rare",
+    team:"MI/GT", avatarUrl:null, avatarAlt:null,
+    matches:48, runs:42, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:9,
+    strikeRate:84.00,
+    bestBowlingWickets:6, bestBowlingRuns:12, economyRate:8.80, wickets:58, catches:11, stumpings:0 },
+
+  { id:"harshal_patel_ipl", name:"Harshal Patel", country:"India", role:"Bowler", rarity:"Epic",
+    team:"RCB/SRH", avatarUrl:null, avatarAlt:null,
+    matches:103, runs:145, fours:7, sixes:3,
+    fifties:0, hundreds:0, highestScore:19,
+    strikeRate:96.67,
+    bestBowlingWickets:5, bestBowlingRuns:27, economyRate:8.80, wickets:140, catches:24, stumpings:0 },
+
+  { id:"deepak_chahar_ipl", name:"Deepak Chahar", country:"India", role:"Bowler", rarity:"Rare",
+    team:"CSK/RR", avatarUrl:null, avatarAlt:null,
+    matches:108, runs:198, fours:11, sixes:4,
+    fifties:0, hundreds:0, highestScore:26,
+    strikeRate:95.65,
+    bestBowlingWickets:4, bestBowlingRuns:13, economyRate:7.72, wickets:100, catches:22, stumpings:0 },
+
+  { id:"prasidh_krishna_ipl", name:"Prasidh Krishna", country:"India", role:"Bowler", rarity:"Rare",
+    team:"KKR/RR/GT", avatarUrl:null, avatarAlt:null,
+    matches:75, runs:62, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:8,
+    strikeRate:62.00,
+    bestBowlingWickets:4, bestBowlingRuns:30, economyRate:9.04, wickets:93, catches:14, stumpings:0 },
+
+  { id:"mitchell_starc_ipl", name:"Mitchell Starc", country:"Australia", role:"Bowler", rarity:"Epic",
+    team:"KKR", avatarUrl:null, avatarAlt:null,
+    matches:13, runs:12, fours:0, sixes:0,
+    fifties:0, hundreds:0, highestScore:7,
+    strikeRate:85.71,
+    bestBowlingWickets:3, bestBowlingRuns:14, economyRate:8.94, wickets:17, catches:4, stumpings:0 },
+
+  { id:"umesh_yadav_ipl", name:"Umesh Yadav", country:"India", role:"Bowler", rarity:"Rare",
+    team:"DC/KKR/MI/RCB", avatarUrl:null, avatarAlt:null,
+    matches:109, runs:88, fours:4, sixes:2,
+    fifties:0, hundreds:0, highestScore:11,
+    strikeRate:62.41,
+    bestBowlingWickets:4, bestBowlingRuns:20, economyRate:8.92, wickets:101, catches:17, stumpings:0 },
+
+  { id:"sandeep_sharma_ipl", name:"Sandeep Sharma", country:"India", role:"Bowler", rarity:"Common",
+    team:"PBKS/SRH/RR", avatarUrl:null, avatarAlt:null,
+    matches:106, runs:62, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:8,
+    strikeRate:49.60,
+    bestBowlingWickets:5, bestBowlingRuns:18, economyRate:8.18, wickets:108, catches:15, stumpings:0 },
+
+  { id:"andrew_tye_ipl", name:"Andrew Tye", country:"Australia", role:"Bowler", rarity:"Rare",
+    team:"PBKS/GT", avatarUrl:null, avatarAlt:null,
+    matches:39, runs:28, fours:1, sixes:1,
+    fifties:0, hundreds:0, highestScore:6,
+    strikeRate:58.33,
+    bestBowlingWickets:5, bestBowlingRuns:17, economyRate:8.84, wickets:57, catches:8, stumpings:0 },
+
+  { id:"imran_tahir_ipl", name:"Imran Tahir", country:"South Africa", role:"Bowler", rarity:"Epic",
+    team:"CSK/DC", avatarUrl:null, avatarAlt:null,
+    matches:62, runs:28, fours:0, sixes:1,
+    fifties:0, hundreds:0, highestScore:9,
+    strikeRate:58.33,
+    bestBowlingWickets:4, bestBowlingRuns:15, economyRate:7.47, wickets:89, catches:19, stumpings:0 },
+
+  { id:"ravi_bopara_ipl", name:"Ravi Bopara", country:"England", role:"All-rounder", rarity:"Common",
+    team:"PBKS/SRH", avatarUrl:null, avatarAlt:null,
+    matches:40, runs:557, fours:41, sixes:18,
+    fifties:2, hundreds:0, highestScore:55,
+    strikeRate:138.16,
+    bestBowlingWickets:3, bestBowlingRuns:17, economyRate:8.43, wickets:20, catches:14, stumpings:0 },
+
+  { id:"axar_patel_ipl", name:"Axar Patel", country:"India", role:"All-rounder", rarity:"Rare",
+    team:"PBKS/DC/GT", avatarUrl:null, avatarAlt:null,
+    matches:133, runs:888, fours:54, sixes:35,
+    fifties:1, hundreds:0, highestScore:42,
+    strikeRate:127.73,
+    bestBowlingWickets:4, bestBowlingRuns:21, economyRate:7.32, wickets:100, catches:47, stumpings:0 },
+
+  { id:"washington_sundar_ipl", name:"Washington Sundar", country:"India", role:"All-rounder", rarity:"Rare",
+    team:"RCB/SRH/GT", avatarUrl:null, avatarAlt:null,
+    matches:97, runs:617, fours:39, sixes:17,
+    fifties:1, hundreds:0, highestScore:51,
+    strikeRate:120.19,
+    bestBowlingWickets:4, bestBowlingRuns:12, economyRate:7.11, wickets:78, catches:27, stumpings:0 },
+
+  // ── MORE BATTERS ──────────────────────────────────────────────────
+  { id:"yuvraj_singh_ipl", name:"Yuvraj Singh", country:"India", role:"Batter", rarity:"Epic",
+    team:"PBKS/RCB/MI/SRH", avatarUrl:null, avatarAlt:null,
+    matches:132, runs:2750, fours:246, sixes:141,
+    fifties:18, hundreds:1, highestScore:83,
+    strikeRate:133.58,
+    bestBowlingWickets:2, bestBowlingRuns:14, economyRate:8.83, wickets:17, catches:48, stumpings:0 },
+
+  { id:"robin_uthappa_ipl", name:"Robin Uthappa", country:"India", role:"Wicket-keeper", rarity:"Rare",
+    team:"RCB/PBKS/KKR/RR/CSK", avatarUrl:null, avatarAlt:null,
+    matches:197, runs:4952, fours:525, sixes:160,
+    fifties:27, hundreds:2, highestScore:88,
+    strikeRate:131.19,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:93, stumpings:28 },
+
+  { id:"manish_pandey_ipl", name:"Manish Pandey", country:"India", role:"Batter", rarity:"Rare",
+    team:"RCB/KKR/SRH/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:174, runs:3889, fours:341, sixes:90,
+    fifties:25, hundreds:1, highestScore:114,
+    strikeRate:122.64,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:68, stumpings:0 },
+
+  { id:"murali_vijay_ipl", name:"Murali Vijay", country:"India", role:"Batter", rarity:"Common",
+    team:"CSK/PBKS/DC", avatarUrl:null, avatarAlt:null,
+    matches:111, runs:2619, fours:297, sixes:66,
+    fifties:16, hundreds:1, highestScore:127,
+    strikeRate:120.91,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:44, stumpings:0 },
+
+  { id:"parthiv_patel_ipl", name:"Parthiv Patel", country:"India", role:"Wicket-keeper", rarity:"Common",
+    team:"MI/RCB/CSK/SRH", avatarUrl:null, avatarAlt:null,
+    matches:143, runs:2848, fours:333, sixes:75,
+    fifties:9, hundreds:1, highestScore:100,
+    strikeRate:128.64,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:116, stumpings:26 },
+
+  { id:"nicholas_pooran_ipl", name:"Nicholas Pooran", country:"West Indies", role:"Wicket-keeper", rarity:"Epic",
+    team:"PBKS/SRH/LSG", avatarUrl:null, avatarAlt:null,
+    matches:89, runs:1998, fours:132, sixes:120,
+    fifties:13, hundreds:0, highestScore:77,
+    strikeRate:154.88,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:65, stumpings:15 },
+
+  { id:"david_miller_ipl", name:"David Miller", country:"South Africa", role:"Batter", rarity:"Epic",
+    team:"PBKS/GT/RR", avatarUrl:null, avatarAlt:null,
+    matches:139, runs:3000, fours:208, sixes:155,
+    fifties:20, hundreds:2, highestScore:101,
+    strikeRate:141.43,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:52, stumpings:0 },
+
+  { id:"brendon_mccullum_ipl", name:"Brendon McCullum", country:"New Zealand", role:"Wicket-keeper", rarity:"Epic",
+    team:"KKR/CSK/RCB", avatarUrl:null, avatarAlt:null,
+    matches:109, runs:2880, fours:300, sixes:127,
+    fifties:18, hundreds:2, highestScore:158,
+    strikeRate:131.38,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:64, stumpings:25 },
+
+  { id:"aaron_finch_ipl", name:"Aaron Finch", country:"Australia", role:"Batter", rarity:"Rare",
+    team:"RCB/MI/SRH/GT", avatarUrl:null, avatarAlt:null,
+    matches:66, runs:1445, fours:134, sixes:60,
+    fifties:9, hundreds:1, highestScore:96,
+    strikeRate:130.88,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:27, stumpings:0 },
+
+  { id:"jason_roy_ipl", name:"Jason Roy", country:"England", role:"Batter", rarity:"Rare",
+    team:"GT/DC", avatarUrl:null, avatarAlt:null,
+    matches:30, runs:706, fours:72, sixes:34,
+    fifties:5, hundreds:0, highestScore:73,
+    strikeRate:146.57,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:11, stumpings:0 },
+
+  { id:"evin_lewis_ipl", name:"Evin Lewis", country:"West Indies", role:"Batter", rarity:"Rare",
+    team:"MI/RR", avatarUrl:null, avatarAlt:null,
+    matches:39, runs:944, fours:88, sixes:60,
+    fifties:5, hundreds:1, highestScore:101,
+    strikeRate:144.05,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:14, stumpings:0 },
+
+  { id:"alex_hales_ipl", name:"Alex Hales", country:"England", role:"Batter", rarity:"Rare",
+    team:"SRH/PBKS/KKR/MI", avatarUrl:null, avatarAlt:null,
+    matches:32, runs:793, fours:77, sixes:36,
+    fifties:6, hundreds:1, highestScore:116,
+    strikeRate:143.12,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:9, stumpings:0 },
+
+  { id:"mayank_agarwal_ipl", name:"Mayank Agarwal", country:"India", role:"Batter", rarity:"Rare",
+    team:"KKR/PBKS/SRH", avatarUrl:null, avatarAlt:null,
+    matches:118, runs:2971, fours:260, sixes:112,
+    fifties:21, hundreds:3, highestScore:106,
+    strikeRate:139.28,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:33, stumpings:0 },
+
+  { id:"prithvi_shaw_ipl", name:"Prithvi Shaw", country:"India", role:"Batter", rarity:"Rare",
+    team:"DC", avatarUrl:null, avatarAlt:null,
+    matches:76, runs:1936, fours:235, sixes:63,
+    fifties:11, hundreds:1, highestScore:99,
+    strikeRate:148.31,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:23, stumpings:0 },
+
+  { id:"abhishek_sharma_ipl", name:"Abhishek Sharma", country:"India", role:"All-rounder", rarity:"Epic",
+    team:"PBKS/SRH", avatarUrl:null, avatarAlt:null,
+    matches:57, runs:1458, fours:121, sixes:91,
+    fifties:10, hundreds:2, highestScore:135,
+    strikeRate:171.26,
+    bestBowlingWickets:3, bestBowlingRuns:17, economyRate:8.48, wickets:21, catches:19, stumpings:0 },
+
+  { id:"tim_david_ipl", name:"Tim David", country:"Singapore", role:"Batter", rarity:"Epic",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:42, runs:979, fours:62, sixes:76,
+    fifties:6, hundreds:0, highestScore:95,
+    strikeRate:169.78,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:15, stumpings:0 },
+
+  { id:"rinku_singh_ipl", name:"Rinku Singh", country:"India", role:"Batter", rarity:"Rare",
+    team:"KKR", avatarUrl:null, avatarAlt:null,
+    matches:60, runs:1208, fours:79, sixes:72,
+    fifties:7, hundreds:0, highestScore:74,
+    strikeRate:159.68,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:18, stumpings:0 },
+
+  { id:"tilak_varma_ipl", name:"Tilak Varma", country:"India", role:"Batter", rarity:"Rare",
+    team:"MI", avatarUrl:null, avatarAlt:null,
+    matches:54, runs:1284, fours:98, sixes:63,
+    fifties:8, hundreds:2, highestScore:111,
+    strikeRate:141.97,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:22, stumpings:0 },
+
+  { id:"yashasvi_jaiswal_ipl", name:"Yashasvi Jaiswal", country:"India", role:"Batter", rarity:"Epic",
+    team:"RR", avatarUrl:null, avatarAlt:null,
+    matches:54, runs:1808, fours:166, sixes:89,
+    fifties:14, hundreds:2, highestScore:124,
+    strikeRate:162.34,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:19, stumpings:0 },
+
+  // ── MORE BOWLERS ──────────────────────────────────────────────────
+  { id:"rp_singh_ipl", name:"RP Singh", country:"India", role:"Bowler", rarity:"Common",
+    team:"DC/KKR/MI/SRH", avatarUrl:null, avatarAlt:null,
+    matches:95, runs:122, fours:5, sixes:3,
+    fifties:0, hundreds:0, highestScore:14,
+    strikeRate:68.54,
+    bestBowlingWickets:4, bestBowlingRuns:24, economyRate:8.04, wickets:97, catches:20, stumpings:0 },
+
+  { id:"dhawal_kulkarni_ipl", name:"Dhawal Kulkarni", country:"India", role:"Bowler", rarity:"Common",
+    team:"MI/RR/GT", avatarUrl:null, avatarAlt:null,
+    matches:65, runs:44, fours:1, sixes:0,
+    fifties:0, hundreds:0, highestScore:6,
+    strikeRate:52.38,
+    bestBowlingWickets:4, bestBowlingRuns:20, economyRate:7.82, wickets:65, catches:13, stumpings:0 },
+
+  { id:"shahbaz_ahmed_ipl", name:"Shahbaz Ahmed", country:"India", role:"All-rounder", rarity:"Common",
+    team:"RCB/SRH", avatarUrl:null, avatarAlt:null,
+    matches:70, runs:803, fours:61, sixes:35,
+    fifties:4, hundreds:0, highestScore:72,
+    strikeRate:138.69,
+    bestBowlingWickets:4, bestBowlingRuns:28, economyRate:7.96, wickets:47, catches:24, stumpings:0 },
+
+  { id:"varun_chakravarthy_ipl", name:"Varun Chakravarthy", country:"India", role:"Bowler", rarity:"Rare",
+    team:"KKR", avatarUrl:null, avatarAlt:null,
+    matches:75, runs:35, fours:1, sixes:0,
+    fifties:0, hundreds:0, highestScore:5,
+    strikeRate:48.61,
+    bestBowlingWickets:4, bestBowlingRuns:13, economyRate:7.19, wickets:96, catches:17, stumpings:0 },
+
+  { id:"noor_ahmed_ipl", name:"Noor Ahmad", country:"Afghanistan", role:"Bowler", rarity:"Rare",
+    team:"GT/CSK", avatarUrl:null, avatarAlt:null,
+    matches:41, runs:42, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:9,
+    strikeRate:84.00,
+    bestBowlingWickets:4, bestBowlingRuns:11, economyRate:7.21, wickets:52, catches:9, stumpings:0 },
+
+  { id:"kuldeep_yadav_ipl", name:"Kuldeep Yadav", country:"India", role:"Bowler", rarity:"Epic",
+    team:"KKR/DC/MI", avatarUrl:null, avatarAlt:null,
+    matches:93, runs:96, fours:4, sixes:2,
+    fifties:0, hundreds:0, highestScore:15,
+    strikeRate:72.18,
+    bestBowlingWickets:5, bestBowlingRuns:24, economyRate:8.08, wickets:112, catches:23, stumpings:0 },
+
+  { id:"mohit_sharma_ipl", name:"Mohit Sharma", country:"India", role:"Bowler", rarity:"Rare",
+    team:"CSK/SRH/GT", avatarUrl:null, avatarAlt:null,
+    matches:78, runs:62, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:8,
+    strikeRate:60.19,
+    bestBowlingWickets:5, bestBowlingRuns:16, economyRate:8.22, wickets:89, catches:12, stumpings:0 },
+
+  { id:"arshdeep_singh_ipl", name:"Arshdeep Singh", country:"India", role:"Bowler", rarity:"Epic",
+    team:"PBKS", avatarUrl:null, avatarAlt:null,
+    matches:85, runs:70, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:10,
+    strikeRate:58.82,
+    bestBowlingWickets:5, bestBowlingRuns:32, economyRate:8.64, wickets:108, catches:14, stumpings:0 },
+
+  { id:"zaheer_khan_ipl", name:"Zaheer Khan", country:"India", role:"Bowler", rarity:"Epic",
+    team:"MI/DC/RCB", avatarUrl:null, avatarAlt:null,
+    matches:100, runs:120, fours:6, sixes:2,
+    fifties:0, hundreds:0, highestScore:13,
+    strikeRate:76.43,
+    bestBowlingWickets:4, bestBowlingRuns:19, economyRate:7.69, wickets:102, catches:26, stumpings:0 },
+
+  { id:"pragyan_ojha_ipl", name:"Pragyan Ojha", country:"India", role:"Bowler", rarity:"Common",
+    team:"DC/MI/SRH", avatarUrl:null, avatarAlt:null,
+    matches:100, runs:84, fours:3, sixes:1,
+    fifties:0, hundreds:0, highestScore:12,
+    strikeRate:84.00,
+    bestBowlingWickets:4, bestBowlingRuns:20, economyRate:7.36, wickets:104, catches:24, stumpings:0 },
+
+  { id:"morne_morkel_ipl", name:"Morne Morkel", country:"South Africa", role:"Bowler", rarity:"Rare",
+    team:"DC/KKR/RR", avatarUrl:null, avatarAlt:null,
+    matches:74, runs:82, fours:3, sixes:2,
+    fifties:0, hundreds:0, highestScore:10,
+    strikeRate:62.59,
+    bestBowlingWickets:4, bestBowlingRuns:28, economyRate:7.96, wickets:81, catches:16, stumpings:0 },
+
+  { id:"ishant_sharma_ipl", name:"Ishant Sharma", country:"India", role:"Bowler", rarity:"Rare",
+    team:"KKR/DC/SRH/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:78, runs:62, fours:2, sixes:1,
+    fifties:0, hundreds:0, highestScore:6,
+    strikeRate:62.00,
+    bestBowlingWickets:4, bestBowlingRuns:21, economyRate:8.68, wickets:75, catches:12, stumpings:0 },
+
+  { id:"sohail_tanvir_ipl", name:"Sohail Tanvir", country:"Pakistan", role:"Bowler", rarity:"Rare",
+    team:"RR/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:47, runs:98, fours:5, sixes:4,
+    fifties:0, hundreds:0, highestScore:29,
+    strikeRate:124.05,
+    bestBowlingWickets:6, bestBowlingRuns:14, economyRate:8.10, wickets:64, catches:13, stumpings:0 },
+
+  { id:"shaun_tait_ipl", name:"Shaun Tait", country:"Australia", role:"Bowler", rarity:"Rare",
+    team:"RR/MI/SRH", avatarUrl:null, avatarAlt:null,
+    matches:28, runs:28, fours:1, sixes:1,
+    fifties:0, hundreds:0, highestScore:10,
+    strikeRate:107.69,
+    bestBowlingWickets:4, bestBowlingRuns:16, economyRate:8.72, wickets:38, catches:7, stumpings:0 },
+
+  { id:"shivam_mavi_ipl", name:"Shivam Mavi", country:"India", role:"Bowler", rarity:"Common",
+    team:"KKR/GT", avatarUrl:null, avatarAlt:null,
+    matches:48, runs:78, fours:4, sixes:3,
+    fifties:0, hundreds:0, highestScore:14,
+    strikeRate:96.29,
+    bestBowlingWickets:4, bestBowlingRuns:21, economyRate:8.86, wickets:47, catches:8, stumpings:0 },
+
+  { id:"simarjeet_singh_ipl", name:"Simarjeet Singh", country:"India", role:"Bowler", rarity:"Common",
+    team:"CSK/MI", avatarUrl:null, avatarAlt:null,
+    matches:22, runs:14, fours:0, sixes:0,
+    fifties:0, hundreds:0, highestScore:4,
+    strikeRate:46.67,
+    bestBowlingWickets:3, bestBowlingRuns:18, economyRate:8.50, wickets:24, catches:4, stumpings:0 },
+
+  { id:"liam_livingstone_ipl", name:"Liam Livingstone", country:"England", role:"All-rounder", rarity:"Epic",
+    team:"PBKS", avatarUrl:null, avatarAlt:null,
+    matches:45, runs:1068, fours:72, sixes:79,
+    fifties:5, hundreds:0, highestScore:94,
+    strikeRate:174.63,
+    bestBowlingWickets:4, bestBowlingRuns:26, economyRate:9.28, wickets:23, catches:17, stumpings:0 },
+
+  { id:"krunal_pandya_ipl", name:"Krunal Pandya", country:"India", role:"All-rounder", rarity:"Rare",
+    team:"MI/LSG/DC", avatarUrl:null, avatarAlt:null,
+    matches:122, runs:1378, fours:87, sixes:63,
+    fifties:4, hundreds:0, highestScore:86,
+    strikeRate:129.28,
+    bestBowlingWickets:3, bestBowlingRuns:10, economyRate:7.98, wickets:78, catches:42, stumpings:0 },
+
+  { id:"shardul_thakur_ipl", name:"Shardul Thakur", country:"India", role:"All-rounder", rarity:"Rare",
+    team:"CSK/DC/KKR/PBKS", avatarUrl:null, avatarAlt:null,
+    matches:96, runs:608, fours:40, sixes:29,
+    fifties:1, hundreds:0, highestScore:67,
+    strikeRate:145.10,
+    bestBowlingWickets:4, bestBowlingRuns:24, economyRate:9.42, wickets:91, catches:26, stumpings:0 },
+
+  { id:"wriddhiman_saha_ipl", name:"Wriddhiman Saha", country:"India", role:"Wicket-keeper", rarity:"Common",
+    team:"CSK/KKR/PBKS/SRH/GT", avatarUrl:null, avatarAlt:null,
+    matches:164, runs:2427, fours:253, sixes:57,
+    fifties:12, hundreds:1, highestScore:115,
+    strikeRate:125.27,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:155, stumpings:31 },
+
+  { id:"naman_ojha_ipl", name:"Naman Ojha", country:"India", role:"Wicket-keeper", rarity:"Common",
+    team:"SRH/DC/MI", avatarUrl:null, avatarAlt:null,
+    matches:83, runs:1254, fours:130, sixes:28,
+    fifties:6, hundreds:0, highestScore:89,
+    strikeRate:116.74,
+    bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:62, stumpings:12 },
+
+  { id:"jaydev_unadkat_ipl", name:"Jaydev Unadkat", country:"India", role:"Bowler", rarity:"Common",
+    team:"RR/CSK/MI", avatarUrl:null, avatarAlt:null,
+    matches:96, runs:134, fours:7, sixes:3,
+    fifties:0, hundreds:0, highestScore:17,
+    strikeRate:83.23,
+    bestBowlingWickets:5, bestBowlingRuns:7, economyRate:8.64, wickets:88, catches:20, stumpings:0 },
+
+  { id:"chris_morris_ipl", name:"Chris Morris", country:"South Africa", role:"All-rounder", rarity:"Epic",
+    team:"DC/CSK/RR", avatarUrl:null, avatarAlt:null,
+    matches:70, runs:658, fours:39, sixes:41,
+    fifties:1, hundreds:0, highestScore:82,
+    strikeRate:184.87,
+    bestBowlingWickets:4, bestBowlingRuns:23, economyRate:8.89, wickets:80, catches:23, stumpings:0 },
+
+  { id:"shivam_dube_ipl", name:"Shivam Dube", country:"India", role:"All-rounder", rarity:"Epic",
+    team:"MI/RCB/CSK", avatarUrl:null, avatarAlt:null,
+    matches:91, runs:1618, fours:95, sixes:108,
+    fifties:7, hundreds:0, highestScore:95,
+    strikeRate:156.35,
+    bestBowlingWickets:3, bestBowlingRuns:16, economyRate:9.73, wickets:30, catches:28, stumpings:0 },
+
+  { id:"chris_jordan_ipl", name:"Chris Jordan", country:"England", role:"Bowler", rarity:"Rare",
+    team:"PBKS/RCB/CSK/SRH/MI", avatarUrl:null, avatarAlt:null,
+    matches:56, runs:176, fours:8, sixes:9,
+    fifties:0, hundreds:0, highestScore:37,
+    strikeRate:157.14,
+    bestBowlingWickets:4, bestBowlingRuns:22, economyRate:9.29, wickets:64, catches:21, stumpings:0 },
+
+  { id:"maheesh_theekshana_ipl", name:"Maheesh Theekshana", country:"Sri Lanka", role:"Bowler", rarity:"Rare",
+    team:"CSK", avatarUrl:null, avatarAlt:null,
+    matches:38, runs:28, fours:0, sixes:1,
+    fifties:0, hundreds:0, highestScore:6,
+    strikeRate:56.00,
+    bestBowlingWickets:4, bestBowlingRuns:13, economyRate:7.42, wickets:46, catches:9, stumpings:0 },
+
+  { id:"matheesha_pathirana_ipl", name:"Matheesha Pathirana", country:"Sri Lanka", role:"Bowler", rarity:"Epic",
+    team:"CSK", avatarUrl:null, avatarAlt:null,
+    matches:48, runs:18, fours:0, sixes:0,
+    fifties:0, hundreds:0, highestScore:4,
+    strikeRate:40.00,
+    bestBowlingWickets:4, bestBowlingRuns:16, economyRate:7.65, wickets:60, catches:10, stumpings:0 },
+
+]; // end IPL_CARDS
 
 // Boot
+computeDeckAverages();
 showLanding();
 </script>
 </body>
