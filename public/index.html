@@ -577,7 +577,7 @@ const STATE = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SOCKET SETUP
 // ═══════════════════════════════════════════════════════════════════════════════
-const socket = io();
+const socket = io('https://superstar-cricket-cards.onrender.com');
 
 socket.on('connect', () => console.log('Connected:', socket.id));
 socket.on('disconnect', () => {
