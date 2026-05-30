@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Trumpcard V11 — IPL_100Players CoinToss RoleFilter</title>
+<title>Superstar Trumpcard V12 — BugFixes OnlineFlow QuitButton</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -356,7 +356,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div class="menu-label">🤖 SINGLE PLAYER</div>
       <button class="btn-green" onclick="showFormatSelect()">▶ PLAY VS AI</button>
       <div class="menu-label" style="margin-top:4px;">🌐 MULTIPLAYER</div>
-      <button class="btn-primary" onclick="showLobby()">▶ PLAY ONLINE</button>
+      <button class="btn-primary" onclick="showFormatSelectOnline()">▶ PLAY ONLINE</button>
       <button class="btn-secondary" onclick="showRules()">📋 RULES</button>
     </div>
   </div>
@@ -482,7 +482,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <button class="btn-primary" onclick="joinRoom()">JOIN ROOM</button>
     </div>
     <div class="error-msg" id="lobby-error"></div>
-    <button class="btn-secondary" style="max-width:340px;" onclick="showLanding()">← BACK</button>
+    <button class="btn-secondary" style="max-width:340px;" onclick="G.onlineMode?showPage('page-role'):showLanding()">← BACK</button>
   </div>
 </div>
 
@@ -527,8 +527,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 <div id="page-match" class="page hidden">
   <div class="match-header">
     <div class="scoreboard-bar" id="scoreboard-bar"></div>
-    <div class="round-info">
+    <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
       <div class="round-badge" id="round-badge">Round 1/10</div>
+      <button onclick="confirmQuit()" style="background:transparent;border:1px solid rgba(255,255,255,.15);
+        color:var(--gray);font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
+        padding:2px 8px;border-radius:3px;cursor:pointer;">✕ QUIT</button>
     </div>
   </div>
   <div class="status-banner" id="status-banner">Loading…</div>
@@ -537,6 +540,29 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div id="opp-card-area"></div>
     <div class="card-label you">★ YOUR CARD</div>
     <div id="my-card-area"></div>
+  </div>
+</div>
+
+<!-- QUIT CONFIRM OVERLAY -->
+<div id="quit-overlay" class="hidden" style="position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="background:linear-gradient(160deg,#1a4a2e,#0d2b1a);border:2px solid var(--gold);
+    border-radius:16px;padding:28px;text-align:center;max-width:270px;width:90%;">
+    <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+    <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:3px;color:var(--gold);margin-bottom:8px;">QUIT MATCH?</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.5;" id="quit-msg">
+      Your progress will be lost.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="doQuit()" style="background:linear-gradient(135deg,#e84040,#a02020);
+        color:#fff;border:none;border-radius:4px;font-family:'Bebas Neue',cursive;
+        font-size:18px;letter-spacing:3px;padding:12px;cursor:pointer;">YES, QUIT</button>
+      <button onclick="document.getElementById('quit-overlay').classList.add('hidden')"
+        style="background:transparent;color:var(--gold);border:2px solid var(--gold);border-radius:4px;
+        font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;padding:12px;cursor:pointer;">
+        KEEP PLAYING</button>
+    </div>
   </div>
 </div>
 
@@ -697,7 +723,27 @@ const G = {
   selectedFormat: 'ODI',
   selectedRole: null,       // 'batter' | 'bowler' | null (all)
   coinTossWinner: null,     // 'player' | 'ai'
+  onlineMode: false,        // true when going to online multiplayer
 };
+
+function confirmQuit() {
+  const msg = document.getElementById('quit-msg');
+  msg.textContent = G.mode === 'online'
+    ? 'Your opponent will win by default.'
+    : 'Your progress will be lost.';
+  document.getElementById('quit-overlay').classList.remove('hidden');
+}
+
+function doQuit() {
+  document.getElementById('quit-overlay').classList.add('hidden');
+  document.getElementById('result-overlay').classList.add('hidden');
+  G.inGame = false;
+  if (G.mode === 'online' && socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  showLanding();
+}
 
 function currentPhase() { return 'all'; }
 function allowedStats()  { return STAT_CONFIG.map(s => s.key); }
@@ -958,10 +1004,8 @@ function initSocket() {
     G.oppCards    = {};
     G.pendingRoundStart = null;
     G.inGame      = true;
-    // New pre-match hand arrangement phase. The server should wait for hand:reorder
-    // or for its own 30-second timeout before sending round:start. If an older server
-    // sends round:start immediately, we buffer it until the player presses READY.
-    showArrangePhase();
+    // Show coin toss then arrange
+    showCoinTossOnline();
   });
 
   socket.on('round:start', (payload) => {
@@ -1177,13 +1221,24 @@ function shuffle(arr) {
 // ═══════════════════════════════════════════════════════════════════
 
 function showFormatSelect() {
+  G.onlineMode = false;
+  showPage('page-format');
+}
+
+// Online flow: Format → Role → Lobby
+function showFormatSelectOnline() {
+  G.onlineMode = true;
   showPage('page-format');
 }
 
 function selectFormat(fmt) {
   G.selectedFormat = fmt;
   document.getElementById('role-format-badge').textContent = fmt;
+  // Update role page back button destination
   showPage('page-role');
+  // Update role page back button
+  const roleBackBtn = document.querySelector('#page-role .btn-danger');
+  if (roleBackBtn) roleBackBtn.onclick = G.onlineMode ? showFormatSelectOnline : showFormatSelect;
 }
 
 function getDeckForFormat(fmt) {
@@ -1192,9 +1247,12 @@ function getDeckForFormat(fmt) {
 }
 
 function selectRole(role) {
-  // role = 'batter' | 'bowler'
   G.selectedRole = role;
-  startAIGame();
+  if (G.onlineMode) {
+    showLobby();  // go to lobby with format+role already set
+  } else {
+    startAIGame();
+  }
 }
 
 // Role categorization
@@ -1303,6 +1361,38 @@ function showCoinToss() {
 
 function afterCoinToss() {
   showArrangePhase();
+}
+
+// Online coin toss — purely visual, picker is decided by server
+function showCoinTossOnline() {
+  showPage('page-cointoss');
+  const coin   = document.getElementById('coin');
+  const label  = document.getElementById('cointoss-label');
+  const sub    = document.getElementById('cointoss-sub');
+  const btn    = document.getElementById('cointoss-continue-btn');
+
+  label.textContent = '';
+  sub.textContent   = '';
+  btn.classList.add('hidden');
+  coin.className    = '';
+  coin.textContent  = '🪙';
+
+  coin.classList.add('coin-spinning');
+
+  setTimeout(() => {
+    coin.classList.remove('coin-spinning');
+    coin.classList.add('coin-landed');
+    // Server decides picker — just show a fun message
+    coin.textContent  = '🏏';
+    label.textContent = 'MATCH STARTING!';
+    label.style.color = 'var(--gold)';
+    sub.textContent   = `Good luck vs ${G.players.find(p=>p.socketId!==socket?.id)?.name || 'opponent'}!`;
+    setTimeout(() => {
+      btn.classList.remove('hidden');
+    }, 500);
+  }, 1500);
+
+  btn.onclick = () => showArrangePhase();
 }
 
 
@@ -1519,9 +1609,18 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   // Stat comparison line
   const sc  = STAT_CONFIG.find(s=>s.key===statKey);
   const myV = displayVal(G.myCard, statKey);
-  const opV = displayVal(G.aiCard, statKey);
+  // Get opponent card correctly for both AI and online modes
+  let oppCardForStat = null;
+  if (mode === 'ai') {
+    oppCardForStat = allCards?.['ai_player'] || G.aiCard;
+  } else {
+    // Online: find first opponent card in allCards
+    const oppPlayer = G.players.find(p => p.socketId !== socket?.id);
+    oppCardForStat = oppPlayer ? allCards?.[oppPlayer.socketId] : null;
+  }
+  const opV = displayVal(oppCardForStat, statKey);
   const myName  = G.myName || 'You';
-  const oppName = G.oppName || 'AI';
+  const oppName = (mode === 'ai') ? (G.oppName || 'AI') : (G.players.find(p=>p.socketId!==socket?.id)?.name || 'Opponent');
   statLine.innerHTML = `Challenge: <strong>${sc.label}</strong> &mdash; <span style="color:var(--gold)">${myV}</span> (${myName}) vs <span style="color:var(--blue)">${opV}</span> (${oppName})`;
 
   // Podium chips
@@ -1618,6 +1717,14 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
       document.getElementById('result-overlay').classList.add('hidden');
       if (mode === 'ai') {
         showFinalResult(null, G.myIndex);
+      } else {
+        // Online: ack next round — server will send game:over
+        if (!G.ackedNext) {
+          G.ackedNext = true;
+          nextBtn.classList.add('hidden');
+          document.getElementById('waiting-next-msg').classList.remove('hidden');
+          socket.emit('round:next');
+        }
       }
     };
   } else {
