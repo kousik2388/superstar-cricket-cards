@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Trumpcard V15 — OnlineLobby Challenge DisconnectFix</title>
+<title>Superstar Trumpcard V15 — OnlineLobby CoinToss Arrange AllScenarios</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -909,7 +909,7 @@ function showMatchmakingScreen(state, opponentName) {
   }
 }
 
-function proceedAfterMatch() { showCoinTossOnline(); }
+function proceedAfterMatch() { if (G.inGame) showCoinTossOnline(); }
 
 function joinRoom() {
   const n = getPlayerName(); if (!n) return;
@@ -1147,6 +1147,11 @@ function applyRoundStart({ round, yourCard, pickerIndex, pickerName, scores, tot
 let socket;
 function initSocket() {
   if (socket && socket.connected) return;
+  // Destroy stale disconnected socket before recreating
+  if (socket && !socket.connected) {
+    try { socket.removeAllListeners(); socket.disconnect(); } catch(e){}
+    socket = null;
+  }
   socket = io('https://superstar-cricket-cards.onrender.com', {
     transports:['websocket','polling'],
     reconnection:true, reconnectionAttempts:10,
@@ -1245,27 +1250,13 @@ function initSocket() {
     G.pendingRoundStart = null;
     G.inGame      = true;
 
-    // If we came through the challenge flow, the "matched" screen is already showing
-    // and user clicks "LET'S PLAY" → proceedAfterMatch() → showCoinTossOnline()
-    // If matched screen is visible, don't navigate away yet — let user click the button
-    const mmPage = document.getElementById('page-matchmaking');
-    if (mmPage && !mmPage.classList.contains('hidden')) {
-      // Update the opponent name on the matched screen if not already set
-      const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
-      if (oppPlayer) {
-        document.getElementById('mm-opponent-name').textContent = oppPlayer.name;
-        document.getElementById('mm-opponent-card').classList.remove('hidden');
-        document.getElementById('mm-spinner').style.display = 'none';
-        document.getElementById('mm-title').textContent = 'OPPONENT FOUND!';
-        document.getElementById('mm-cancel-btn').classList.add('hidden');
-        document.getElementById('mm-continue-btn').classList.remove('hidden');
-        document.getElementById('mm-icon').textContent = '🎉';
-      }
-    } else {
-      // Came from room code join — show matched screen briefly
-      const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
-      showMatchmakingScreen('matched', oppPlayer?.name || 'Opponent');
-    }
+    // Show matched screen for 2 seconds, then auto-advance to coin toss → arrange
+    const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
+    showMatchmakingScreen('matched', oppPlayer?.name || 'Opponent');
+    // Auto-proceed after 2 seconds — no button needed
+    setTimeout(() => {
+      if (G.inGame && G.mode === 'online') showCoinTossOnline();
+    }, 2200);
   });
 
   socket.on('round:start', (payload) => {
@@ -1319,7 +1310,19 @@ function initSocket() {
 
   socket.on('game:opponentDisconnected', ({ opponentName }) => {
     G.inGame = false;
-    showDisconnectOverlay(`${opponentName} disconnected.`);
+    document.getElementById('challenge-overlay')?.classList.add('hidden');
+    showDisconnectOverlay(`${opponentName} left the game.`);
+  });
+
+  // Handle server errors gracefully
+  socket.on('connect_error', (err) => {
+    console.error('Socket error:', err);
+    if (!G.inGame) setLobbyError('Connection failed. Check your internet and retry.');
+  });
+
+  socket.on('room:error', ({ message }) => {
+    setLobbyError(message);
+    showLobby();
   });
 
   socket.on('game:opponentWantsRematch', () => {
@@ -1522,7 +1525,17 @@ function getCountries(deck) {
 function selectRole(role) {
   G.selectedRole = role;
   if (G.onlineMode) {
-    showLobby();  // go to lobby with format+role already set
+    // Show the lobby page with name input ready
+    // Don't call showLobby() (resets state) — just navigate to lobby page directly
+    initSocket();
+    document.getElementById('disconnect-overlay').classList.add('hidden');
+    document.getElementById('result-overlay').classList.add('hidden');
+    // Always show name-entry first so player can confirm/enter name before going online
+    document.getElementById('lobby-name-section').classList.remove('hidden');
+    document.getElementById('lobby-players-section').classList.add('hidden');
+    setLobbyError('');
+    G.isHost = false; G.roomCode = null;
+    showPage('page-lobby');
   } else {
     startAIGame();
   }
