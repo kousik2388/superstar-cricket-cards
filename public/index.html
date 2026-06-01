@@ -5,7 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Superstar Trumpcard V18 — LoadingScreen Mismatch MultiPlayer OpenRooms</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
-<script src="/socket.io/socket.io.js"></script>
+<script>
+// Load socket.io — try local server first (Render), fall back to CDN (itch.io)
+(function() {
+  var s = document.createElement('script');
+  s.src = '/socket.io/socket.io.js';
+  s.onerror = function() {
+    var cdn = document.createElement('script');
+    cdn.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+    document.head.appendChild(cdn);
+  };
+  document.head.appendChild(s);
+})();
+</script>
 <style>
 :root{
   --green-dark:#0d2b1a;--green-mid:#1a4a2e;--gold:#f0c040;--gold-dark:#b8860b;--gold-light:#ffe680;
@@ -861,6 +873,7 @@ const G = {
   arrangeSecondsLeft: 30,
   pendingRoundStart: null,
   gameReady: false,  // true only after arrange phase complete
+  _waitingForTossResult: false,
   // for lobby
   selectedPlayerCount: 2,
   roomCode: null,
@@ -1386,6 +1399,8 @@ function initSocket() {
     G.myCard      = null;
     G.oppCards    = {};
     G.pendingRoundStart = null;
+    G.gameReady   = false;
+    G._waitingForTossResult = false;
     G.inGame      = true;
 
     // Show matched screen for 2 seconds, then auto-advance to coin toss → arrange
@@ -1399,8 +1414,11 @@ function initSocket() {
 
   socket.on('round:start', (payload) => {
     if (!G.gameReady) {
-      // Not ready yet (still in coin toss / arrange) — buffer it
       G.pendingRoundStart = payload;
+      // If we're on the coin toss page waiting for toss result, reveal it now
+      if (G._waitingForTossResult) {
+        revealOnlineTossResult();
+      }
       return;
     }
     applyRoundStart(payload);
@@ -1896,8 +1914,7 @@ function startAIGame() {
   G.oppCards = {};
   G.myCard   = null;
 
-  setupMatchUI();
-  showCoinToss();
+  showCoinToss();  // setupMatchUI called inside finishArrangeHand
 }
 
 // ── COIN TOSS ──────────────────────────────────────────────────────
@@ -1946,7 +1963,7 @@ function afterCoinToss() {
   showArrangePhase();
 }
 
-// Online coin toss — purely visual, picker is decided by server
+// Online coin toss — spins, then shows server-decided toss winner
 function showCoinTossOnline() {
   showPage('page-cointoss');
   const coin   = document.getElementById('coin');
@@ -1965,17 +1982,53 @@ function showCoinTossOnline() {
   setTimeout(() => {
     coin.classList.remove('coin-spinning');
     coin.classList.add('coin-landed');
-    // Server decides picker — just show a fun message
-    coin.textContent  = '🏏';
-    label.textContent = 'MATCH STARTING!';
-    label.style.color = 'var(--gold)';
-    sub.textContent   = `Good luck vs ${G.players.find(p=>p.socketId!==socket?.id)?.name || 'opponent'}!`;
-    setTimeout(() => {
-      btn.classList.remove('hidden');
-    }, 500);
-  }, 1500);
+
+    // Reveal the toss result using pickerIndex from round:start
+    // (which was buffered in G.pendingRoundStart)
+    revealOnlineTossResult();
+  }, 1800);
 
   btn.onclick = () => showArrangePhase();
+}
+
+function revealOnlineTossResult() {
+  const coin  = document.getElementById('coin');
+  const label = document.getElementById('cointoss-label');
+  const sub   = document.getElementById('cointoss-sub');
+  const btn   = document.getElementById('cointoss-continue-btn');
+
+  // pickerIndex from buffered round:start, or wait for it
+  const pickerIdx  = G.pendingRoundStart?.pickerIndex ?? G.pickerIndex ?? -1;
+  const pickerName = G.pendingRoundStart?.pickerName  || (pickerIdx === G.myIndex ? 'You' : null);
+
+  if (pickerIdx === -1) {
+    // round:start not arrived yet — show spinner, wait
+    label.textContent = 'DECIDING…';
+    label.style.color = 'var(--gray)';
+    sub.textContent   = 'Waiting for server…';
+    // Will be called again by round:start buffer check
+    G._waitingForTossResult = true;
+    return;
+  }
+
+  G._waitingForTossResult = false;
+  const iMeFirst = pickerIdx === G.myIndex;
+  const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
+
+  if (iMeFirst) {
+    coin.textContent  = '😄';
+    label.textContent = 'YOU WIN THE TOSS!';
+    label.style.color = 'var(--green-win)';
+    sub.textContent   = `You pick the stat in Round 1!`;
+  } else {
+    coin.textContent  = '🎯';
+    label.textContent = `${oppPlayer?.name || 'OPPONENT'} WINS THE TOSS!`;
+    label.style.color = 'var(--blue)';
+    sub.textContent   = `${oppPlayer?.name || 'Opponent'} picks the stat in Round 1`;
+  }
+
+  // Show button after brief pause
+  setTimeout(() => btn.classList.remove('hidden'), 700);
 }
 
 
