@@ -41,8 +41,10 @@ function awardPoints(rank, totalPlayers) {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const rooms            = {};
-const matchmakingQueue = [];  // for 2-player quick match only
+const matchmakingQueue = [];  // legacy quick match fallback
 const socketToRoom     = {};
+const onlinePlayers    = {};  // socketId → { name, status: 'lobby'|'in-game'|'challenged' }
+const pendingChallenges= {};  // challengerSocketId → { targetSocketId, expiresAt }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function generateRoomCode() {
@@ -245,11 +247,120 @@ function endGame(room, reason='normal') {
   setTimeout(() => { delete rooms[room.code]; }, 30000);
 }
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function broadcastOnlinePlayers() {
+  const list = Object.entries(onlinePlayers)
+    .filter(([, p]) => p.status === 'lobby')
+    .map(([socketId, p]) => ({ socketId, name: p.name }));
+  io.emit('lobby:playerList', { players: list });
+}
+
+function setPlayerStatus(socketId, status) {
+  if (onlinePlayers[socketId]) {
+    onlinePlayers[socketId].status = status;
+    broadcastOnlinePlayers();
+  }
+}
+
 // ── SOCKET HANDLERS ───────────────────────────────────────────────────────────
 io.on('connection', socket => {
   console.log(`[+] ${socket.id}`);
 
-  // ── CREATE ROOM ──
+  // ── ENTER LOBBY ──
+  socket.on('lobby:enter', ({ playerName }) => {
+    onlinePlayers[socket.id] = { name: playerName || 'Player', status: 'lobby' };
+    socket._playerName = playerName;
+    broadcastOnlinePlayers();
+  });
+
+  // ── LEAVE LOBBY ──
+  socket.on('lobby:leave', () => {
+    delete onlinePlayers[socket.id];
+    // cancel any pending challenge this player sent
+    if (pendingChallenges[socket.id]) {
+      const { targetSocketId } = pendingChallenges[socket.id];
+      io.to(targetSocketId).emit('challenge:cancelled', { challengerName: socket._playerName });
+      delete pendingChallenges[socket.id];
+    }
+    broadcastOnlinePlayers();
+  });
+
+  // ── SEND CHALLENGE ──
+  socket.on('challenge:send', ({ targetSocketId }) => {
+    const challenger = onlinePlayers[socket.id];
+    const target     = onlinePlayers[targetSocketId];
+    if (!challenger || !target) return socket.emit('challenge:error', { message: 'Player not available.' });
+    if (target.status !== 'lobby') return socket.emit('challenge:error', { message: 'Player is busy.' });
+
+    // Cancel any previous pending challenge by this challenger
+    if (pendingChallenges[socket.id]) {
+      const old = pendingChallenges[socket.id];
+      io.to(old.targetSocketId).emit('challenge:cancelled', { challengerName: challenger.name });
+    }
+
+    pendingChallenges[socket.id] = { targetSocketId, expiresAt: Date.now() + 30000 };
+    setPlayerStatus(socket.id, 'challenged');
+    setPlayerStatus(targetSocketId, 'challenged');
+
+    socket.emit('challenge:sent', { targetName: target.name });
+    io.to(targetSocketId).emit('challenge:received', {
+      challengerSocketId: socket.id,
+      challengerName: challenger.name,
+    });
+  });
+
+  // ── ACCEPT CHALLENGE ──
+  socket.on('challenge:accept', ({ challengerSocketId }) => {
+    const challenge = pendingChallenges[challengerSocketId];
+    if (!challenge || challenge.targetSocketId !== socket.id) return;
+    delete pendingChallenges[challengerSocketId];
+
+    const code = generateRoomCode();
+    const room = createRoom(code, 2, 'ODI');
+    rooms[code] = room;
+    const p1name = onlinePlayers[challengerSocketId]?.name || 'Player 1';
+    const p2name = onlinePlayers[socket.id]?.name || 'Player 2';
+    room.players.push({ socketId: challengerSocketId, name: p1name, score: 0 });
+    room.players.push({ socketId: socket.id,          name: p2name, score: 0 });
+    socketToRoom[challengerSocketId] = code;
+    socketToRoom[socket.id]          = code;
+
+    const challengerSocket = io.sockets.sockets.get(challengerSocketId);
+    if (challengerSocket) challengerSocket.join(code);
+    socket.join(code);
+
+    setPlayerStatus(challengerSocketId, 'in-game');
+    setPlayerStatus(socket.id,          'in-game');
+
+    io.to(challengerSocketId).emit('challenge:accepted', { opponentName: p2name, code });
+    io.to(socket.id).emit('challenge:accepted',          { opponentName: p1name, code });
+
+    startGame(room);
+  });
+
+  // ── DECLINE CHALLENGE ──
+  socket.on('challenge:decline', ({ challengerSocketId }) => {
+    const challenge = pendingChallenges[challengerSocketId];
+    if (!challenge || challenge.targetSocketId !== socket.id) return;
+    delete pendingChallenges[challengerSocketId];
+
+    setPlayerStatus(challengerSocketId, 'lobby');
+    setPlayerStatus(socket.id,          'lobby');
+
+    io.to(challengerSocketId).emit('challenge:declined', { targetName: onlinePlayers[socket.id]?.name });
+  });
+
+  // ── CANCEL CHALLENGE ──
+  socket.on('challenge:cancel', ({ targetSocketId }) => {
+    if (pendingChallenges[socket.id]?.targetSocketId === targetSocketId) {
+      delete pendingChallenges[socket.id];
+      setPlayerStatus(socket.id,     'lobby');
+      setPlayerStatus(targetSocketId,'lobby');
+      io.to(targetSocketId).emit('challenge:cancelled', { challengerName: onlinePlayers[socket.id]?.name });
+    }
+  });
+
+  // ── CREATE ROOM (manual code) ──
   socket.on('room:create', ({ playerName, maxPlayers=2, format='ODI' }) => {
     const code = generateRoomCode();
     const room = createRoom(code, Math.min(Math.max(maxPlayers,2),4), format);
@@ -260,13 +371,13 @@ io.on('connection', socket => {
     socket.emit('room:created', { code, maxPlayers: room.maxPlayers });
   });
 
-  // ── JOIN ROOM ──
+  // ── JOIN ROOM (manual code) ──
   socket.on('room:join', ({ playerName, code }) => {
     const upper = (code||'').toUpperCase();
     const room  = rooms[upper];
-    if (!room)                          return socket.emit('room:error', { message: 'Room not found.' });
+    if (!room)                               return socket.emit('room:error', { message: 'Room not found.' });
     if (room.players.length >= room.maxPlayers) return socket.emit('room:error', { message: 'Room is full.' });
-    if (room.started)                   return socket.emit('room:error', { message: 'Game already started.' });
+    if (room.started)                        return socket.emit('room:error', { message: 'Game already started.' });
 
     const name = playerName || `Player ${room.players.length+1}`;
     room.players.push({ socketId: socket.id, name, score: 0 });
@@ -276,9 +387,8 @@ io.on('connection', socket => {
     const playerList = room.players.map(p => ({ name: p.name, socketId: p.socketId }));
     room.players.forEach(p => {
       io.to(p.socketId).emit('room:playerJoined', {
-        players:    playerList,
-        maxPlayers: room.maxPlayers,
-        canStart:   room.players.length >= MIN_PLAYERS,
+        players: playerList, maxPlayers: room.maxPlayers,
+        canStart: room.players.length >= MIN_PLAYERS,
       });
     });
   });
@@ -289,16 +399,15 @@ io.on('connection', socket => {
     if (!code) return;
     const room = rooms[code];
     if (!room || room.started) return;
-    if (room.players[0].socketId !== socket.id) return; // only host
+    if (room.players[0].socketId !== socket.id) return;
     if (room.players.length < MIN_PLAYERS) return;
     startGame(room);
   });
 
-  // ── QUICK MATCH (2-player only) ──
+  // ── LEGACY QUICK MATCH ──
   socket.on('matchmaking:join', ({ playerName, format='ODI' }) => {
     const staleIdx = matchmakingQueue.findIndex(s => !io.sockets.sockets.get(s.id));
     if (staleIdx !== -1) matchmakingQueue.splice(staleIdx, 1);
-
     if (matchmakingQueue.length > 0) {
       const opp  = matchmakingQueue.shift();
       const code = generateRoomCode();
@@ -306,12 +415,10 @@ io.on('connection', socket => {
       rooms[code] = room;
       room.players.push({ socketId: opp.id,    name: opp._playerName||'Player 1', score: 0 });
       room.players.push({ socketId: socket.id, name: playerName||'Player 2',      score: 0 });
-      socketToRoom[opp.id]    = code;
-      socketToRoom[socket.id] = code;
+      socketToRoom[opp.id] = code; socketToRoom[socket.id] = code;
       opp.join(code); socket.join(code);
-      const [p1,p2] = room.players;
-      io.to(p1.socketId).emit('matchmaking:matched', { opponentName: p2.name, code });
-      io.to(p2.socketId).emit('matchmaking:matched', { opponentName: p1.name, code });
+      io.to(opp.id).emit('matchmaking:matched',    { opponentName: playerName||'Player 2', code });
+      io.to(socket.id).emit('matchmaking:matched', { opponentName: opp._playerName||'Player 1', code });
       startGame(room);
     } else {
       socket._playerName = playerName;
@@ -334,8 +441,6 @@ io.on('connection', socket => {
     if (!room || room.finished || room.roundPhase !== 'pick') return;
     const picker = room.players[room.pickerIndex];
     if (socket.id !== picker.socketId) return;
-    // Validate stat is allowed for current phase
-    if (!allowedStats(room.round).includes(statKey) && statKey !== 'bestBowling') return;
     emitStatChosen(room, statKey);
   });
 
@@ -346,13 +451,10 @@ io.on('connection', socket => {
     const room = rooms[code];
     if (!room || room.finished || room.roundPhase !== 'confirm') return;
     const picker = room.players[room.pickerIndex];
-    if (socket.id === picker.socketId) return; // picker doesn't confirm
-
+    if (socket.id === picker.socketId) return;
     room.confirmAcks.add(socket.id);
     const nonPickers = room.players.filter(p => p.socketId !== picker.socketId);
-    if (room.confirmAcks.size >= nonPickers.length) {
-      resolveRound(room);
-    }
+    if (room.confirmAcks.size >= nonPickers.length) resolveRound(room);
   });
 
   // ── NEXT ROUND ──
@@ -379,14 +481,11 @@ io.on('connection', socket => {
     room.playAgainAcks.add(socket.id);
     if (room.playAgainAcks.size >= room.players.length) {
       room.playAgainAcks = new Set();
-      room.nextAcks      = new Set();
-      room.confirmAcks   = new Set();
-      room.finished      = false;
-      room.started       = false;
-      room.round         = 0;
-      room.pickerIndex   = 0;
-      room.roundStat     = null;
-      room.roundPhase    = 'pick';
+      room.nextAcks = new Set();
+      room.confirmAcks = new Set();
+      room.finished = false; room.started = false;
+      room.round = 0; room.pickerIndex = 0;
+      room.roundStat = null; room.roundPhase = 'pick';
       room.players.forEach(p => { p.score = 0; });
       startGame(room);
     } else {
@@ -398,17 +497,49 @@ io.on('connection', socket => {
   // ── DISCONNECT ──
   socket.on('disconnect', () => {
     console.log(`[-] ${socket.id}`);
+
+    // Clean up online lobby
+    if (onlinePlayers[socket.id]) {
+      delete onlinePlayers[socket.id];
+      broadcastOnlinePlayers();
+    }
+
+    // Cancel any pending challenge
+    if (pendingChallenges[socket.id]) {
+      const { targetSocketId } = pendingChallenges[socket.id];
+      setPlayerStatus(targetSocketId, 'lobby');
+      io.to(targetSocketId).emit('challenge:cancelled', { challengerName: socket._playerName });
+      delete pendingChallenges[socket.id];
+    }
+    // Also cancel challenges directed at this player
+    for (const [cId, ch] of Object.entries(pendingChallenges)) {
+      if (ch.targetSocketId === socket.id) {
+        setPlayerStatus(cId, 'lobby');
+        io.to(cId).emit('challenge:cancelled', { challengerName: 'Opponent' });
+        delete pendingChallenges[cId];
+      }
+    }
+
+    // Clean up matchmaking queue
     const mmIdx = matchmakingQueue.indexOf(socket);
     if (mmIdx !== -1) matchmakingQueue.splice(mmIdx, 1);
+
+    // Clean up room
     const code = socketToRoom[socket.id];
     if (!code) return;
     delete socketToRoom[socket.id];
     const room = rooms[code];
-    if (!room || room.finished) return;
+    if (!room) return;
+
     const left = room.players.find(p => p.socketId === socket.id);
-    if (room.started) {
-      room.players.filter(p => p.socketId !== socket.id).forEach(p => {
-        io.to(p.socketId).emit('game:opponentDisconnected', { opponentName: left?.name || 'A player' });
+    const remaining = room.players.filter(p => p.socketId !== socket.id);
+
+    if (room.started && !room.finished) {
+      remaining.forEach(p => {
+        io.to(p.socketId).emit('game:opponentDisconnected', { opponentName: left?.name || 'Opponent' });
+        // Return remaining players to lobby
+        if (onlinePlayers[p.socketId]) setPlayerStatus(p.socketId, 'lobby');
+        delete socketToRoom[p.socketId];
       });
       endGame(room, 'disconnect');
     }
