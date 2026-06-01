@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Trumpcard V14 — 100PerFormat AllFormats CountryReady</title>
+<title>Superstar Trumpcard V15 — OnlineLobby Challenge DisconnectFix</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -94,7 +94,18 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .room-code-label{font-size:11px;letter-spacing:3px;color:var(--gray)}
 .room-code-value{font-family:'Bebas Neue',cursive;font-size:40px;color:var(--gold);letter-spacing:10px}
 
-/* PLAYER LIST in lobby */
+/* ONLINE PLAYER LIST */
+.online-player-row{display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;padding:8px 12px;cursor:pointer;transition:background .15s,border-color .15s}
+.online-player-row:hover{background:rgba(74,192,240,.1);border-color:rgba(74,192,240,.3)}
+.online-player-row.challenged{border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.07);cursor:default}
+.online-player-avatar{width:32px;height:32px;border-radius:50%;background:var(--green-mid);
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.online-player-name{flex:1;font-weight:700;font-size:14px}
+.online-player-status{font-size:10px;letter-spacing:1px;font-family:'Bebas Neue',cursive;padding:2px 7px;border-radius:3px}
+.status-free{background:rgba(50,200,80,.15);color:var(--green-win);border:1px solid rgba(50,200,80,.3)}
+.status-challenged{background:rgba(240,192,64,.15);color:var(--gold);border:1px solid rgba(240,192,64,.3)}
 .player-list{width:100%;max-width:320px;display:flex;flex-direction:column;gap:6px}
 .player-list-item{display:flex;align-items:center;gap:10px;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
@@ -454,35 +465,82 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 <!-- LOBBY -->
 <div id="page-lobby" class="page hidden">
-  <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:24px 20px;gap:14px;width:100%;">
+  <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:20px 16px;gap:12px;width:100%;max-width:400px;margin:0 auto;">
     <div class="page-header">ONLINE MULTIPLAYER</div>
-    <div class="lobby-section" style="max-width:340px;">
+
+    <!-- Name entry (shown before entering lobby) -->
+    <div id="lobby-name-section" style="width:100%;display:flex;flex-direction:column;gap:10px;">
       <div class="lobby-section-title">YOUR NAME</div>
       <input class="input-field" id="player-name-input" placeholder="Enter your name" maxlength="20">
+      <button class="btn-primary" onclick="enterOnlineLobby()">FIND PLAYERS ▶</button>
     </div>
-    <div class="lobby-section" style="max-width:340px;">
-      <div class="lobby-section-title">⚡ QUICK MATCH (2 Players)</div>
-      <button class="btn-primary" onclick="joinMatchmaking()">FIND OPPONENT</button>
-    </div>
-    <div class="divider-or">OR</div>
-    <div class="lobby-section" style="max-width:340px;">
-      <div class="lobby-section-title">🏠 CREATE ROOM</div>
-      <div style="font-size:12px;color:var(--gray);text-align:center;">How many players? (2–4)</div>
-      <div class="player-count-row">
-        <div class="count-btn active" id="cnt-2" onclick="setPlayerCount(2)">2</div>
-        <div class="count-btn" id="cnt-3" onclick="setPlayerCount(3)">3</div>
-        <div class="count-btn" id="cnt-4" onclick="setPlayerCount(4)">4</div>
+
+    <!-- Online players browser (shown after entering lobby) -->
+    <div id="lobby-players-section" class="hidden" style="width:100%;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="lobby-section-title" style="margin:0;">🌐 PLAYERS ONLINE</div>
+        <div id="lobby-refresh-dot" style="width:8px;height:8px;border-radius:50%;background:var(--green-win);animation:blink-dot 2s infinite;"></div>
       </div>
-      <button class="btn-primary" onclick="createRoom()">CREATE ROOM</button>
+      <div id="online-players-list" style="display:flex;flex-direction:column;gap:6px;min-height:80px;">
+        <div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">Looking for players…</div>
+      </div>
+      <div class="divider-or">OR USE ROOM CODE</div>
+      <div style="display:flex;gap:8px;">
+        <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4" style="flex:1;font-size:20px;letter-spacing:6px;">
+        <button class="btn-primary" onclick="joinRoom()" style="width:auto;padding:0 16px;font-size:16px;">JOIN</button>
+      </div>
     </div>
-    <div class="divider-or">OR</div>
-    <div class="lobby-section" style="max-width:340px;">
-      <div class="lobby-section-title">🔑 JOIN WITH CODE</div>
-      <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4">
-      <button class="btn-primary" onclick="joinRoom()">JOIN ROOM</button>
-    </div>
+
     <div class="error-msg" id="lobby-error"></div>
-    <button class="btn-secondary" style="max-width:340px;" onclick="G.onlineMode?showPage('page-role'):showLanding()">← BACK</button>
+    <button class="btn-secondary" style="width:100%;" onclick="exitOnlineLobby()">← BACK</button>
+  </div>
+</div>
+
+<!-- CHALLENGE RECEIVED POPUP -->
+<div id="challenge-overlay" class="hidden" style="position:fixed;inset:0;z-index:250;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="background:linear-gradient(160deg,#1a3a4a,#0d2030);border:2px solid var(--blue);
+    border-radius:16px;padding:28px 24px;text-align:center;max-width:290px;width:90%;
+    animation:pop-in .3s cubic-bezier(.175,.885,.32,1.275);">
+    <div style="font-size:36px;margin-bottom:8px;">⚔️</div>
+    <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:3px;color:var(--blue);margin-bottom:6px;">CHALLENGE!</div>
+    <div id="challenge-text" style="font-size:14px;color:var(--white);margin-bottom:20px;line-height:1.5;">
+      Player wants to play!
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button id="challenge-accept-btn" onclick="acceptChallenge()"
+        style="background:linear-gradient(135deg,#32c850,#1a7030);color:#fff;border:none;
+        border-radius:4px;font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:3px;
+        padding:12px;cursor:pointer;">⚔️ ACCEPT</button>
+      <button onclick="declineChallenge()"
+        style="background:transparent;color:var(--red);border:2px solid var(--red);border-radius:4px;
+        font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;padding:10px;cursor:pointer;">
+        DECLINE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MATCHMAKING STATUS SCREEN -->
+<div id="page-matchmaking" class="page hidden">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;
+    padding:32px 20px;gap:20px;text-align:center;">
+    <div id="mm-icon" style="font-size:56px;">🔍</div>
+    <div id="mm-title" style="font-family:'Bebas Neue',cursive;font-size:32px;letter-spacing:4px;color:var(--gold);">FINDING OPPONENT…</div>
+    <div id="mm-sub" style="font-size:14px;color:var(--gray);line-height:1.6;"></div>
+    <div id="mm-spinner" style="display:flex;gap:8px;justify-content:center;margin:8px 0;">
+      <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+    </div>
+    <div id="mm-opponent-card" class="hidden"
+      style="background:rgba(0,0,0,.4);border:2px solid var(--gold);border-radius:12px;
+      padding:16px 24px;width:100%;max-width:280px;">
+      <div style="font-size:11px;letter-spacing:3px;color:var(--gray);">YOUR OPPONENT</div>
+      <div id="mm-opponent-name" style="font-family:'Bebas Neue',cursive;font-size:28px;
+        color:var(--white);letter-spacing:2px;margin:4px 0;"></div>
+      <div style="font-size:12px;color:var(--green-win);">● Ready to play!</div>
+    </div>
+    <button id="mm-cancel-btn" class="btn-danger" style="max-width:240px;width:100%;margin-top:8px;" onclick="cancelMatchmaking()">CANCEL</button>
+    <button id="mm-continue-btn" class="btn-primary hidden" style="max-width:240px;width:100%;" onclick="proceedAfterMatch()">LET'S PLAY ▶</button>
   </div>
 </div>
 
@@ -599,7 +657,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div class="dc-icon">📡</div>
     <div class="dc-title">PLAYER LEFT</div>
     <div class="dc-text" id="dc-text">A player disconnected.</div>
-    <button class="btn-exit" onclick="showLanding()">MAIN MENU</button>
+    <button class="btn-exit" onclick="forceReturnToMenu()">MAIN MENU</button>
   </div>
 </div>
 
@@ -721,10 +779,145 @@ const G = {
   isHost: false,
   // AI game flow
   selectedFormat: 'ODI',
-  selectedRole: null,       // 'batter' | 'bowler' | null (all)
-  coinTossWinner: null,     // 'player' | 'ai'
-  onlineMode: false,        // true when going to online multiplayer
+  selectedRole: null,
+  coinTossWinner: null,
+  onlineMode: false,
+  // Challenge state
+  pendingChallengerSocketId: null,
+  pendingChallengerName: null,
+  _challengeTargetId: null,
 };
+
+// ── FORCE RETURN TO MENU ─────────────────────────────────────────
+function forceReturnToMenu() {
+  G.inGame = false;
+  ['disconnect-overlay','result-overlay','quit-overlay','challenge-overlay'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  if (socket) {
+    try { socket.emit('lobby:leave'); socket.removeAllListeners(); socket.disconnect(); } catch(e){}
+    socket = null;
+  }
+  G.players = []; G.myHand = []; G.oppCards = {};
+  G.roomCode = null; G.isHost = false;
+  showLanding();
+}
+
+// ── ONLINE LOBBY ─────────────────────────────────────────────────
+function enterOnlineLobby() {
+  const n = getPlayerName(); if (!n) return;
+  initSocket();
+  document.getElementById('lobby-name-section').classList.add('hidden');
+  document.getElementById('lobby-players-section').classList.remove('hidden');
+  setLobbyError('');
+  socket.emit('lobby:enter', { playerName: n });
+}
+
+function exitOnlineLobby() {
+  if (socket) socket.emit('lobby:leave');
+  document.getElementById('lobby-name-section').classList.remove('hidden');
+  document.getElementById('lobby-players-section').classList.add('hidden');
+  if (G.onlineMode) showPage('page-role');
+  else showLanding();
+}
+
+function renderOnlinePlayers(players) {
+  const list = document.getElementById('online-players-list');
+  if (!list) return;
+  const me     = socket?.id;
+  const others = players.filter(p => p.socketId !== me);
+  if (others.length === 0) {
+    list.innerHTML = `<div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">No players online right now.<br><span style="font-size:11px;opacity:.6;">Share the link to invite a friend!</span></div>`;
+    return;
+  }
+  const emojis = ['🏏','🎯','⚡','🌟','🔥','💎'];
+  list.innerHTML = others.map((p, i) => `
+    <div class="online-player-row" onclick="sendChallenge('${p.socketId}','${p.name.replace(/'/g,"\\'")}')">
+      <div class="online-player-avatar">${emojis[i%6]}</div>
+      <div class="online-player-name">${p.name}</div>
+      <div class="online-player-status status-free">⚔ CHALLENGE</div>
+    </div>`).join('');
+}
+
+function sendChallenge(targetSocketId, targetName) {
+  if (!socket) return;
+  G._challengeTargetId = targetSocketId;
+  socket.emit('challenge:send', { targetSocketId });
+  showMatchmakingScreen('challenging', targetName);
+}
+
+function cancelMatchmaking() {
+  if (socket) {
+    socket.emit('challenge:cancel', { targetSocketId: G._challengeTargetId });
+    socket.emit('matchmaking:cancel');
+    socket.emit('lobby:enter', { playerName: G.myName }); // re-enter lobby
+  }
+  showPage('page-lobby');
+  document.getElementById('lobby-name-section').classList.add('hidden');
+  document.getElementById('lobby-players-section').classList.remove('hidden');
+}
+
+function acceptChallenge() {
+  document.getElementById('challenge-overlay').classList.add('hidden');
+  if (!G.pendingChallengerSocketId) return;
+  socket.emit('challenge:accept', { challengerSocketId: G.pendingChallengerSocketId });
+  showMatchmakingScreen('accepting', G.pendingChallengerName);
+}
+
+function declineChallenge() {
+  document.getElementById('challenge-overlay').classList.add('hidden');
+  if (!G.pendingChallengerSocketId) return;
+  socket.emit('challenge:decline', { challengerSocketId: G.pendingChallengerSocketId });
+  G.pendingChallengerSocketId = null;
+  G.pendingChallengerName = null;
+}
+
+function showMatchmakingScreen(state, opponentName) {
+  showPage('page-matchmaking');
+  const icon       = document.getElementById('mm-icon');
+  const title      = document.getElementById('mm-title');
+  const sub        = document.getElementById('mm-sub');
+  const spinner    = document.getElementById('mm-spinner');
+  const oppCard    = document.getElementById('mm-opponent-card');
+  const oppNameEl  = document.getElementById('mm-opponent-name');
+  const cancelBtn  = document.getElementById('mm-cancel-btn');
+  const continueBtn= document.getElementById('mm-continue-btn');
+
+  oppCard.classList.add('hidden');
+  continueBtn.classList.add('hidden');
+  cancelBtn.classList.remove('hidden');
+  spinner.style.display = 'flex';
+
+  if (state === 'challenging') {
+    icon.textContent  = '⚔️';
+    title.textContent = 'CHALLENGE SENT!';
+    sub.textContent   = `Waiting for ${opponentName} to accept…`;
+  } else if (state === 'accepting') {
+    icon.textContent  = '⚔️';
+    title.textContent = 'MATCH STARTING!';
+    sub.textContent   = `Getting ready to play ${opponentName}…`;
+    cancelBtn.classList.add('hidden');
+  } else if (state === 'matched') {
+    icon.textContent  = '🎉';
+    title.textContent = 'OPPONENT FOUND!';
+    sub.textContent   = `Format: ${G.selectedFormat || 'ODI'}`;
+    spinner.style.display = 'none';
+    oppNameEl.textContent = opponentName;
+    oppCard.classList.remove('hidden');
+    cancelBtn.classList.add('hidden');
+    continueBtn.classList.remove('hidden');
+  }
+}
+
+function proceedAfterMatch() { showCoinTossOnline(); }
+
+function joinRoom() {
+  const n = getPlayerName(); if (!n) return;
+  const c = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (c.length !== 4) { setLobbyError('Enter a 4-character room code.'); return; }
+  setLobbyError('');
+  socket.emit('room:join', { playerName: n, code: c });
+}
 
 function confirmQuit() {
   const msg = document.getElementById('quit-msg');
@@ -737,12 +930,7 @@ function confirmQuit() {
 function doQuit() {
   document.getElementById('quit-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
-  G.inGame = false;
-  if (G.mode === 'online' && socket) {
-    socket.disconnect();
-    socket = null;
-  }
-  showLanding();
+  forceReturnToMenu();
 }
 
 function currentPhase() { return 'all'; }
@@ -968,6 +1156,58 @@ function initSocket() {
   socket.on('connect', () => { G.mySocketId = socket.id; console.log('connected', socket.id); });
   socket.on('disconnect', () => { if (G.mode==='online' && G.inGame) showDisconnectOverlay('Connection lost.'); });
 
+  // ── LOBBY EVENTS ──
+  socket.on('lobby:playerList', ({ players }) => {
+    renderOnlinePlayers(players);
+  });
+
+  socket.on('challenge:sent', ({ targetName }) => {
+    // Already showing matchmaking screen
+  });
+
+  socket.on('challenge:received', ({ challengerSocketId, challengerName }) => {
+    G.pendingChallengerSocketId = challengerSocketId;
+    G.pendingChallengerName     = challengerName;
+    document.getElementById('challenge-text').textContent =
+      `${challengerName} wants to challenge you! Accept?`;
+    document.getElementById('challenge-overlay').classList.remove('hidden');
+  });
+
+  socket.on('challenge:accepted', ({ opponentName, code }) => {
+    G.roomCode = code;
+    showMatchmakingScreen('matched', opponentName);
+  });
+
+  socket.on('challenge:declined', ({ targetName }) => {
+    showPage('page-lobby');
+    document.getElementById('lobby-name-section').classList.add('hidden');
+    document.getElementById('lobby-players-section').classList.remove('hidden');
+    setLobbyError(`${targetName || 'Player'} declined your challenge.`);
+    socket.emit('lobby:enter', { playerName: G.myName });
+  });
+
+  socket.on('challenge:cancelled', ({ challengerName }) => {
+    document.getElementById('challenge-overlay').classList.add('hidden');
+    G.pendingChallengerSocketId = null;
+    G.pendingChallengerName = null;
+    // If we were on matchmaking screen, go back to lobby
+    if (document.getElementById('page-matchmaking') &&
+        !document.getElementById('page-matchmaking').classList.contains('hidden')) {
+      showPage('page-lobby');
+      document.getElementById('lobby-name-section').classList.add('hidden');
+      document.getElementById('lobby-players-section').classList.remove('hidden');
+      setLobbyError(`${challengerName || 'Opponent'} cancelled the challenge.`);
+      socket.emit('lobby:enter', { playerName: G.myName });
+    }
+  });
+
+  socket.on('challenge:error', ({ message }) => {
+    setLobbyError(message);
+    showPage('page-lobby');
+    document.getElementById('lobby-name-section').classList.add('hidden');
+    document.getElementById('lobby-players-section').classList.remove('hidden');
+  });
+
   socket.on('room:created', ({ code, maxPlayers }) => {
     G.roomCode = code; G.isHost = true;
     G.players = [{ socketId: socket.id, name: G.myName, score: 0 }];
@@ -1004,8 +1244,28 @@ function initSocket() {
     G.oppCards    = {};
     G.pendingRoundStart = null;
     G.inGame      = true;
-    // Show coin toss then arrange
-    showCoinTossOnline();
+
+    // If we came through the challenge flow, the "matched" screen is already showing
+    // and user clicks "LET'S PLAY" → proceedAfterMatch() → showCoinTossOnline()
+    // If matched screen is visible, don't navigate away yet — let user click the button
+    const mmPage = document.getElementById('page-matchmaking');
+    if (mmPage && !mmPage.classList.contains('hidden')) {
+      // Update the opponent name on the matched screen if not already set
+      const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
+      if (oppPlayer) {
+        document.getElementById('mm-opponent-name').textContent = oppPlayer.name;
+        document.getElementById('mm-opponent-card').classList.remove('hidden');
+        document.getElementById('mm-spinner').style.display = 'none';
+        document.getElementById('mm-title').textContent = 'OPPONENT FOUND!';
+        document.getElementById('mm-cancel-btn').classList.add('hidden');
+        document.getElementById('mm-continue-btn').classList.remove('hidden');
+        document.getElementById('mm-icon').textContent = '🎉';
+      }
+    } else {
+      // Came from room code join — show matched screen briefly
+      const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
+      showMatchmakingScreen('matched', oppPlayer?.name || 'Opponent');
+    }
   });
 
   socket.on('round:start', (payload) => {
@@ -1074,12 +1334,21 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
-function showLanding() { G.inGame=false; showPage('page-landing'); }
-function showRules()   { showPage('page-rules'); }
+function showLanding() {
+  G.inGame = false;
+  ['disconnect-overlay','result-overlay','quit-overlay','challenge-overlay'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  showPage('page-landing');
+}
+function showRules() { showPage('page-rules'); }
 function showLobby() {
   initSocket();
   document.getElementById('disconnect-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
+  // Reset lobby to name-entry state
+  document.getElementById('lobby-name-section')?.classList.remove('hidden');
+  document.getElementById('lobby-players-section')?.classList.add('hidden');
   setLobbyError('');
   G.isHost = false; G.roomCode = null;
   showPage('page-lobby');
@@ -1165,18 +1434,7 @@ function getPlayerName() {
 }
 function createRoom() {
   const n = getPlayerName(); if (!n) return;
-  socket.emit('room:create', { playerName: n, maxPlayers: G.selectedPlayerCount, format: 'ODI' });
-}
-function joinRoom() {
-  const n = getPlayerName(); if (!n) return;
-  const c = document.getElementById('room-code-input').value.trim().toUpperCase();
-  if (c.length!==4) { setLobbyError('Enter a 4-character room code.'); return; }
-  setLobbyError('');
-  socket.emit('room:join', { playerName: n, code: c });
-}
-function joinMatchmaking() {
-  const n = getPlayerName(); if (!n) return;
-  socket.emit('matchmaking:join', { playerName: n, format: 'ODI' });
+  socket.emit('room:create', { playerName: n, maxPlayers: G.selectedPlayerCount, format: G.selectedFormat || 'ODI' });
 }
 function cancelWaiting() {
   socket.emit('matchmaking:cancel');
