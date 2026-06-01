@@ -387,7 +387,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V20</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V21</div>
   </div>
 </div>
 
@@ -970,12 +970,8 @@ function cancelMatchmaking() {
   if (socket) {
     socket.emit('challenge:cancel', { targetSocketId: G._challengeTargetId });
     socket.emit('matchmaking:cancel');
-    socket.emit('lobby:enter', { playerName: G.myName, format: G.selectedFormat||'ODI', role: G.selectedRole||null });
   }
-  showPage('page-lobby');
-  document.getElementById('lobby-name-section').classList.add('hidden');
-  document.getElementById('lobby-players-section').classList.remove('hidden');
-  switchLobbyTab('players');
+  returnToOnlineLobby('Challenge cancelled.');
 }
 
 function acceptChallenge() {
@@ -990,11 +986,9 @@ function acceptChallenge() {
 }
 
 function declineChallenge() {
-  document.getElementById('challenge-overlay').classList.add('hidden');
   if (!G.pendingChallengerSocketId) return;
   socket.emit('challenge:decline', { challengerSocketId: G.pendingChallengerSocketId });
-  G.pendingChallengerSocketId = null;
-  G.pendingChallengerName = null;
+  returnToOnlineLobby('You declined the challenge.');
 }
 
 function showMatchmakingScreen(state, opponentName) {
@@ -1337,26 +1331,13 @@ function initSocket() {
   });
 
   socket.on('challenge:declined', ({ targetName }) => {
-    showPage('page-lobby');
-    document.getElementById('lobby-name-section').classList.add('hidden');
-    document.getElementById('lobby-players-section').classList.remove('hidden');
-    setLobbyError(`${targetName || 'Player'} declined your challenge.`);
-    socket.emit('lobby:enter', { playerName: G.myName });
+    returnToOnlineLobby(`${targetName || 'Player'} declined your challenge.`);
   });
 
   socket.on('challenge:cancelled', ({ challengerName }) => {
-    document.getElementById('challenge-overlay').classList.add('hidden');
-    G.pendingChallengerSocketId = null;
-    G.pendingChallengerName = null;
-    // If we were on matchmaking screen, go back to lobby
-    if (document.getElementById('page-matchmaking') &&
-        !document.getElementById('page-matchmaking').classList.contains('hidden')) {
-      showPage('page-lobby');
-      document.getElementById('lobby-name-section').classList.add('hidden');
-      document.getElementById('lobby-players-section').classList.remove('hidden');
-      setLobbyError(`${challengerName || 'Opponent'} cancelled the challenge.`);
-      socket.emit('lobby:enter', { playerName: G.myName });
-    }
+    // challenger cancelled — return us to lobby from wherever we are
+    // (could be challenge-overlay, mismatch-overlay, or matchmaking screen)
+    returnToOnlineLobby(`${challengerName || 'Opponent'} cancelled the challenge.`);
   });
 
   socket.on('challenge:error', ({ message }) => {
@@ -1803,12 +1784,39 @@ function mismatchPlayAnyway() {
   showMatchmakingScreen('accepting', G.pendingChallengerName);
 }
 
-function mismatchCancel() {
-  document.getElementById('mismatch-overlay').classList.add('hidden');
-  // Decline the challenge
-  socket.emit('challenge:decline', { challengerSocketId: G_mismatch.challengerSocketId });
+
+// Return player cleanly to the online lobby from any state
+function returnToOnlineLobby(message) {
+  // Hide all overlays
+  document.getElementById('mismatch-overlay')?.classList.add('hidden');
+  document.getElementById('challenge-overlay')?.classList.add('hidden');
+
   G.pendingChallengerSocketId = null;
   G.pendingChallengerName     = null;
+  G._challengeTargetId        = null;
+
+  // Navigate to lobby
+  showPage('page-lobby');
+  document.getElementById('lobby-name-section').classList.add('hidden');
+  document.getElementById('lobby-players-section').classList.remove('hidden');
+  switchLobbyTab('players');
+
+  if (message) setLobbyError(message);
+
+  // Re-register in server lobby with correct format + role
+  if (socket && socket.connected) {
+    socket.emit('lobby:enter', {
+      playerName: G.myName,
+      format:     G.selectedFormat || 'ODI',
+      role:       G.selectedRole   || null,
+    });
+  }
+}
+function mismatchCancel() {
+  // Emit decline to notify the challenger
+  socket.emit('challenge:decline', { challengerSocketId: G_mismatch.challengerSocketId });
+  // Return ourselves to the lobby with a clear message
+  returnToOnlineLobby('You cancelled the challenge.');
 }
 
 function showFormatSelect() {
