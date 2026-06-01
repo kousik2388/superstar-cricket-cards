@@ -114,9 +114,11 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     nextAcks: new Set(),
     playAgainAcks: new Set(),
     arrangeAcks: new Set(),   // tracks who has finished arranging
+    tossReadyAcks: new Set(), // tracks who pressed LET'S PLAY on toss screen
     started: false,
     finished: false,
     pickTimer: null,          // server-side 15s stat-pick timeout
+    confirmTimer: null,       // server-side 10s confirm timeout
     playAgainTimer: null,     // server-side 30s play-again timeout
   };
 }
@@ -165,7 +167,8 @@ function startGame(room) {
     room.hands[p.socketId] = deck.slice(i * 10, (i+1) * 10);
   });
 
-  room.arrangeAcks = new Set();  // reset arrange acks for new game
+  room.arrangeAcks    = new Set();  // reset arrange acks for new game
+  room.tossReadyAcks  = new Set();  // reset toss ready acks for new game
 
   room.players.forEach((p, i) => {
     io.to(p.socketId).emit('game:start', {
@@ -232,8 +235,18 @@ function emitStatChosen(room, statKey) {
       statKey,
       pickerName:   picker.name,
       youMustConfirm: !isPicker,
+      confirmTimeLimit: 10,
     });
   });
+
+  // 10s confirm timer — auto-resolve if non-pickers don't confirm
+  if (room.confirmTimer) clearTimeout(room.confirmTimer);
+  room.confirmTimer = setTimeout(() => {
+    if (room.finished || room.roundPhase !== 'confirm') return;
+    console.log(`[confirm-timeout] Room ${room.code} round ${room.round} — auto-confirm`);
+    room.players.forEach(p => io.to(p.socketId).emit('round:confirmTimeout'));
+    resolveRound(room);
+  }, 10500);
 }
 
 function resolveRound(room) {
@@ -278,6 +291,7 @@ function endGame(room, reason='normal') {
   room.finished = true;
   // Clear any active timers
   if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
+  if (room.confirmTimer) { clearTimeout(room.confirmTimer); room.confirmTimer = null; }
   if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
 
   const sorted  = [...room.players].sort((a,b) => b.score - a.score);
@@ -530,6 +544,19 @@ io.on('connection', socket => {
     }
   });
 
+  // ── TOSS READY (both press LET'S PLAY → go to arrange together) ──
+  socket.on('toss:ready', () => {
+    const code = socketToRoom[socket.id];
+    if (!code) return;
+    const room = rooms[code];
+    if (!room || !room.started) return;
+    room.tossReadyAcks.add(socket.id);
+    if (room.tossReadyAcks.size >= room.players.length) {
+      room.tossReadyAcks = new Set();
+      room.players.forEach(p => io.to(p.socketId).emit('arrange:start'));
+    }
+  });
+
   // ── PICKER PICKS STAT ──
   socket.on('round:pick', ({ statKey }) => {
     const code = socketToRoom[socket.id];
@@ -553,7 +580,10 @@ io.on('connection', socket => {
     if (socket.id === picker.socketId) return;
     room.confirmAcks.add(socket.id);
     const nonPickers = room.players.filter(p => p.socketId !== picker.socketId);
-    if (room.confirmAcks.size >= nonPickers.length) resolveRound(room);
+    if (room.confirmAcks.size >= nonPickers.length) {
+      if (room.confirmTimer) { clearTimeout(room.confirmTimer); room.confirmTimer = null; }
+      resolveRound(room);
+    }
   });
 
   // ── NEXT ROUND ──
