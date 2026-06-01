@@ -113,8 +113,11 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     confirmAcks: new Set(),
     nextAcks: new Set(),
     playAgainAcks: new Set(),
+    arrangeAcks: new Set(),   // tracks who has finished arranging
     started: false,
     finished: false,
+    pickTimer: null,          // server-side 15s stat-pick timeout
+    playAgainTimer: null,     // server-side 30s play-again timeout
   };
 }
 
@@ -162,6 +165,8 @@ function startGame(room) {
     room.hands[p.socketId] = deck.slice(i * 10, (i+1) * 10);
   });
 
+  room.arrangeAcks = new Set();  // reset arrange acks for new game
+
   room.players.forEach((p, i) => {
     io.to(p.socketId).emit('game:start', {
       yourHand:     room.hands[p.socketId],
@@ -175,13 +180,16 @@ function startGame(room) {
     });
   });
 
-  emitRound(room);
+  // Do NOT call emitRound yet — wait for all players to finish arranging (hand:reorder)
 }
 
 function emitRound(room) {
   room.roundStat   = null;
   room.roundPhase  = 'pick';
   room.confirmAcks = new Set();
+
+  // Clear any previous pick timer
+  if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
 
   const picker     = room.players[room.pickerIndex];
   const phase      = currentPhase(room.round);
@@ -198,8 +206,18 @@ function emitRound(room) {
       allowedStats: allowed,
       scores,
       totalRounds:  TOTAL_ROUNDS,
+      pickTimeLimit: 15,
     });
   });
+
+  // Server-side 15s pick timeout — auto-pick a random stat if picker doesn't respond
+  room.pickTimer = setTimeout(() => {
+    if (room.finished || room.roundPhase !== 'pick') return;
+    const randomStat = allowed[Math.floor(Math.random() * allowed.length)];
+    console.log(`[pick-timeout] Room ${room.code} round ${room.round} auto-pick ${randomStat}`);
+    room.players.forEach(p => io.to(p.socketId).emit('round:pickTimeout', { autoStat: randomStat }));
+    emitStatChosen(room, randomStat);
+  }, 15500);
 }
 
 function emitStatChosen(room, statKey) {
@@ -258,6 +276,9 @@ function resolveRound(room) {
 function endGame(room, reason='normal') {
   if (room.finished) return;
   room.finished = true;
+  // Clear any active timers
+  if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
+  if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
 
   const sorted  = [...room.players].sort((a,b) => b.score - a.score);
   const scores  = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
@@ -481,6 +502,34 @@ io.on('connection', socket => {
     socket.emit('matchmaking:cancelled');
   });
 
+  // ── HAND ARRANGE READY ──
+  socket.on('hand:reorder', ({ orderedCardIds }) => {
+    const code = socketToRoom[socket.id];
+    if (!code) return;
+    const room = rooms[code];
+    if (!room || !room.started) return;
+    // Reorder this player's hand according to their arrangement
+    if (Array.isArray(orderedCardIds) && room.hands[socket.id]) {
+      const idMap = Object.fromEntries(room.hands[socket.id].map(c => [c.id, c]));
+      const reordered = orderedCardIds.map(id => idMap[id]).filter(Boolean);
+      if (reordered.length === room.hands[socket.id].length) {
+        room.hands[socket.id] = reordered;
+      }
+    }
+    room.arrangeAcks.add(socket.id);
+    // Notify others that this player is ready
+    room.players.forEach(p => {
+      if (p.socketId !== socket.id) {
+        io.to(p.socketId).emit('arrange:playerReady', { name: room.players.find(x => x.socketId === socket.id)?.name || 'Opponent' });
+      }
+    });
+    // Once all players are ready, emit round:start for everyone
+    if (room.arrangeAcks.size >= room.players.length) {
+      room.arrangeAcks = new Set();
+      emitRound(room);
+    }
+  });
+
   // ── PICKER PICKS STAT ──
   socket.on('round:pick', ({ statKey }) => {
     const code = socketToRoom[socket.id];
@@ -489,6 +538,8 @@ io.on('connection', socket => {
     if (!room || room.finished || room.roundPhase !== 'pick') return;
     const picker = room.players[room.pickerIndex];
     if (socket.id !== picker.socketId) return;
+    // Clear pick timer since picker responded in time
+    if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
     emitStatChosen(room, statKey);
   });
 
@@ -528,6 +579,8 @@ io.on('connection', socket => {
     if (!room) return;
     room.playAgainAcks.add(socket.id);
     if (room.playAgainAcks.size >= room.players.length) {
+      // All players agreed — cancel any pending timeout and start new game
+      if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
       room.playAgainAcks = new Set();
       room.nextAcks = new Set();
       room.confirmAcks = new Set();
@@ -537,8 +590,18 @@ io.on('connection', socket => {
       room.players.forEach(p => { p.score = 0; });
       startGame(room);
     } else {
+      // First player to request rematch — notify others and start 30s timeout
       const other = room.players.find(p => p.socketId !== socket.id);
       if (other) io.to(other.socketId).emit('game:opponentWantsRematch');
+      if (room.playAgainTimer) clearTimeout(room.playAgainTimer);
+      room.playAgainTimer = setTimeout(() => {
+        if (!room || room.playAgainAcks.size < room.players.length) {
+          // Timeout — notify all players that rematch was not accepted
+          room.playAgainAcks = new Set();
+          room.playAgainTimer = null;
+          room.players.forEach(p => io.to(p.socketId).emit('game:rematchTimeout'));
+        }
+      }, 30000);
     }
   });
 
