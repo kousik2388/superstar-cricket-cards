@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Trumpcard V15 — OnlineLobby CoinToss Arrange AllScenarios</title>
+<title>Superstar Trumpcard V15 — CoinToss Arrange WaitFix itchioFix</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -773,6 +773,7 @@ const G = {
   arrangeTimer: null,
   arrangeSecondsLeft: 30,
   pendingRoundStart: null,
+  gameReady: false,  // true only after arrange phase complete
   // for lobby
   selectedPlayerCount: 2,
   roomCode: null,
@@ -806,11 +807,33 @@ function forceReturnToMenu() {
 // ── ONLINE LOBBY ─────────────────────────────────────────────────
 function enterOnlineLobby() {
   const n = getPlayerName(); if (!n) return;
-  initSocket();
+  G.myName = n;
+
+  // Show loading state immediately
   document.getElementById('lobby-name-section').classList.add('hidden');
   document.getElementById('lobby-players-section').classList.remove('hidden');
+  document.getElementById('online-players-list').innerHTML =
+    '<div style="text-align:center;color:var(--gold);font-size:13px;padding:20px 0;">Connecting to server…</div>';
   setLobbyError('');
-  socket.emit('lobby:enter', { playerName: n });
+
+  initSocket();
+
+  // Wait for connection before emitting — handles itch.io iframe delay
+  if (socket.connected) {
+    socket.emit('lobby:enter', { playerName: n });
+  } else {
+    socket.once('connect', () => {
+      socket.emit('lobby:enter', { playerName: n });
+    });
+    // Timeout if connection fails
+    setTimeout(() => {
+      if (!socket.connected) {
+        setLobbyError('Cannot connect to server. Try refreshing.');
+        document.getElementById('lobby-name-section').classList.remove('hidden');
+        document.getElementById('lobby-players-section').classList.add('hidden');
+      }
+    }, 8000);
+  }
 }
 
 function exitOnlineLobby() {
@@ -1099,30 +1122,38 @@ function finishArrangeHand(manualReady) {
   G.arranging = false;
   if (G.arrangeTimer) { clearInterval(G.arrangeTimer); G.arrangeTimer = null; }
 
-  const orderedCardIds = G.myHand.map(c => c.id);
-  if (G.mode === 'online' && socket) {
-    // Server-side requirement: use this order when dealing round cards for this socket.
-    socket.emit('hand:reorder', { orderedCardIds, manualReady });
-  }
-
-  setupMatchUI();
-  showPage('page-match');
-
   if (G.mode === 'ai') {
+    setupMatchUI();
+    showPage('page-match');
     aiRenderRound();
     return;
   }
 
+  // Online: emit order to server, then wait for round:start
+  const orderedCardIds = G.myHand.map(c => c.id);
+  if (socket) socket.emit('hand:reorder', { orderedCardIds, manualReady });
+
+  G.gameReady = true;  // now allow round:start to fire
+
   if (G.pendingRoundStart) {
+    // round:start already arrived while we were arranging — apply it now
+    setupMatchUI();
+    showPage('page-match');
     const payload = G.pendingRoundStart;
     G.pendingRoundStart = null;
     applyRoundStart(payload);
   } else {
-    const banner = document.getElementById('status-banner');
-    banner.innerHTML = '<span class="wait-dot"></span>&nbsp;&nbsp;Waiting for other players to finish arranging…';
-    banner.className = 'status-banner wait';
-    renderMyCard({ clickable:false });
-    renderOppFacedown();
+    // Still waiting for server to send round:start
+    // Show a waiting screen — NOT the match page yet
+    showPage('page-waiting');
+    document.getElementById('waiting-title').textContent = 'READY!';
+    document.getElementById('waiting-for-text').textContent = 'Waiting for opponent to finish arranging…';
+    document.getElementById('waiting-code-box').classList.add('hidden');
+    document.getElementById('start-btn-wrap').classList.add('hidden');
+    document.getElementById('lobby-player-list').innerHTML = '';
+    // Hide cancel button during this wait
+    const cancelBtn = document.querySelector('#page-waiting .btn-danger');
+    if (cancelBtn) cancelBtn.style.display = 'none';
   }
 }
 
@@ -1260,7 +1291,8 @@ function initSocket() {
   });
 
   socket.on('round:start', (payload) => {
-    if (G.arranging) {
+    if (!G.gameReady) {
+      // Not ready yet (still in coin toss / arrange) — buffer it
       G.pendingRoundStart = payload;
       return;
     }
