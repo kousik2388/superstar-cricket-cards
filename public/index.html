@@ -386,9 +386,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div id="loading-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4ac0f0,#f0c040);
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
-    <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">
-      TAP TO CONTINUE
-    </div>
+    <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V20</div>
   </div>
 </div>
 
@@ -685,6 +684,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   <div class="match-header">
     <div class="scoreboard-bar" id="scoreboard-bar"></div>
     <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+      <div id="category-tag" style="font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
+        padding:2px 8px;border-radius:3px;border:1px solid rgba(240,192,64,.4);
+        color:var(--gold);background:rgba(240,192,64,.08);"></div>
       <div class="round-badge" id="round-badge">Round 1/10</div>
       <button onclick="confirmQuit()" style="background:transparent;border:1px solid rgba(255,255,255,.15);
         color:var(--gray);font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
@@ -1390,7 +1392,7 @@ function initSocket() {
   socket.on('matchmaking:cancelled', () => showLobby());
   socket.on('matchmaking:matched',   () => {});
 
-  socket.on('game:start', ({ yourHand, players, yourIndex, totalRounds, battingRounds, format, maxPlayers }) => {
+  socket.on('game:start', ({ yourHand, players, yourIndex, totalRounds, battingRounds, format, role, maxPlayers }) => {
     G.mode        = 'online';
     G.myHand      = [...yourHand];
     G.players     = players.map(p => ({ ...p, score: 0 }));
@@ -1402,6 +1404,9 @@ function initSocket() {
     G.gameReady   = false;
     G._waitingForTossResult = false;
     G.inGame      = true;
+    // Apply server's authoritative format and role
+    if (format) G.selectedFormat = format;
+    if (role !== undefined) G.selectedRole = role;
 
     // Show matched screen for 2 seconds, then auto-advance to coin toss → arrange
     const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
@@ -1605,6 +1610,18 @@ function cancelWaiting() {
 // MATCH UI SETUP
 // ═══════════════════════════════════════════════════════════════════
 function setupMatchUI() {
+  // Show category tag
+  const catTag = document.getElementById('category-tag');
+  if (catTag) {
+    const fmt  = G.selectedFormat || 'ODI';
+    const role = G.selectedRole;
+    const fmtColors = { ODI:'#f0c040', T20I:'#4ac0f0', TEST:'#40c870', IPL:'#c050ff' };
+    const roleEmoji = role === 'batter' ? '🏏' : role === 'bowler' ? '🎳' : '';
+    catTag.textContent = `${roleEmoji} ${fmt}${role ? ' • ' + role.toUpperCase() : ''}`;
+    catTag.style.borderColor = fmtColors[fmt] || 'var(--gold)';
+    catTag.style.color       = fmtColors[fmt] || 'var(--gold)';
+    catTag.style.background  = (fmtColors[fmt] || '#f0c040') + '18';
+  }
   updateScoreboardBar();
   const oppNames = G.players.filter((_,i) => i !== G.myIndex).map(p => p.name);
   document.getElementById('opp-card-label').textContent =
