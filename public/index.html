@@ -694,6 +694,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     </div>
   </div>
   <div class="status-banner" id="status-banner">Loading…</div>
+  <div id="pick-countdown-wrap" class="hidden" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0 2px;">
+    <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">PICK IN</div>
+    <div id="pick-countdown" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--gold);min-width:32px;text-align:center;line-height:1;">15</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">SECS</div>
+  </div>
   <div class="cards-area">
     <div class="card-label" id="opp-card-label">⚔ OPPONENT</div>
     <div id="opp-card-area"></div>
@@ -731,6 +736,12 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   <div class="final-result-text" id="final-result-text">YOU WON!</div>
   <div class="final-leaderboard" id="final-leaderboard"></div>
   <div class="rematch-notice hidden" id="rematch-notice">⏳ Opponent wants a rematch!</div>
+  <div id="rematch-timeout-notice" class="hidden" style="font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:2px;color:var(--red);text-align:center;padding:4px 0;">⌛ OPPONENT DIDN'T RESPOND — TIMED OUT</div>
+  <div id="play-again-countdown-wrap" class="hidden" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0;">
+    <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">RETURNING IN</div>
+    <div id="play-again-countdown" style="font-family:'Bebas Neue',cursive;font-size:22px;color:var(--gold);min-width:24px;text-align:center;">30</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">SECS</div>
+  </div>
   <div class="final-buttons">
     <button class="btn-primary" id="btn-play-again" onclick="playAgain()">🔄 PLAY AGAIN</button>
     <button class="btn-secondary" onclick="showLanding()">🏠 MAIN MENU</button>
@@ -889,6 +900,10 @@ const G = {
   pendingChallengerSocketId: null,
   pendingChallengerName: null,
   _challengeTargetId: null,
+  pickTimer: null,          // client-side 15s pick countdown
+  pickSecondsLeft: 15,
+  playAgainTimer: null,     // client-side play-again wait countdown
+  playAgainSecondsLeft: 30,
 };
 
 // ── FORCE RETURN TO MENU ─────────────────────────────────────────
@@ -904,6 +919,32 @@ function forceReturnToMenu() {
   G.players = []; G.myHand = []; G.oppCards = {};
   G.roomCode = null; G.isHost = false;
   showLanding();
+}
+
+// ── PICK TIMER ───────────────────────────────────────────────────
+function startPickTimer(seconds, onExpire) {
+  clearPickTimer();
+  G.pickSecondsLeft = seconds;
+  const wrap = document.getElementById('pick-countdown-wrap');
+  const el   = document.getElementById('pick-countdown');
+  if (wrap) wrap.classList.remove('hidden');
+  if (el)   el.textContent = G.pickSecondsLeft;
+  G.pickTimer = setInterval(() => {
+    G.pickSecondsLeft--;
+    if (el) {
+      el.textContent = Math.max(0, G.pickSecondsLeft);
+      el.style.color = G.pickSecondsLeft <= 5 ? 'var(--red)' : 'var(--gold)';
+    }
+    if (G.pickSecondsLeft <= 0) {
+      clearPickTimer();
+      if (onExpire) onExpire();
+    }
+  }, 1000);
+}
+function clearPickTimer() {
+  if (G.pickTimer) { clearInterval(G.pickTimer); G.pickTimer = null; }
+  const wrap = document.getElementById('pick-countdown-wrap');
+  if (wrap) wrap.classList.add('hidden');
 }
 
 // ── ONLINE LOBBY ─────────────────────────────────────────────────
@@ -1254,6 +1295,7 @@ function finishArrangeHand(manualReady) {
 }
 
 function applyRoundStart({ round, yourCard, pickerIndex, pickerName, scores, totalRounds }) {
+  clearPickTimer();  // clear any lingering timer from previous round
   G.round       = round;
   G.myCard      = yourCard;
   G.phase       = 'pick';
@@ -1374,6 +1416,8 @@ function initSocket() {
   socket.on('matchmaking:matched',   () => {});
 
   socket.on('game:start', ({ yourHand, players, yourIndex, totalRounds, battingRounds, format, role, maxPlayers }) => {
+    clearPickTimer();
+    clearPlayAgainTimer();
     G.mode        = 'online';
     G.myHand      = [...yourHand];
     G.players     = players.map(p => ({ ...p, score: 0 }));
@@ -1428,6 +1472,7 @@ function initSocket() {
   });
 
   socket.on('round:result', ({ round, statKey, ranked, scores, allCards, isLastRound, nextPickerIndex, nextPickerName, yourIndex }) => {
+    clearPickTimer();
     G.phase       = 'result';
     G.chosenStat  = statKey;
     G.pickerIndex = nextPickerIndex;
@@ -1470,6 +1515,40 @@ function initSocket() {
 
   socket.on('game:opponentWantsRematch', () => {
     document.getElementById('rematch-notice').classList.remove('hidden');
+  });
+
+  // Server auto-picked a stat because picker ran out of time
+  socket.on('round:pickTimeout', ({ autoStat }) => {
+    clearPickTimer();
+    const banner = document.getElementById('status-banner');
+    if (banner) {
+      if (G.myIndex === G.pickerIndex) {
+        banner.textContent = `⏰ TIME'S UP — Auto-picked: ${statLabel(autoStat)}`;
+      } else {
+        banner.textContent = `⏰ ${G.players[G.pickerIndex]?.name || 'Opponent'} ran out of time — Auto-picked: ${statLabel(autoStat)}`;
+      }
+      banner.className = 'status-banner wait';
+    }
+  });
+
+  // Another player finished arranging their hand
+  socket.on('arrange:playerReady', ({ name }) => {
+    const el = document.getElementById('waiting-for-text');
+    if (el) el.textContent = `${name} is ready! Waiting for all players…`;
+  });
+
+  // Rematch timed out — opponent didn't respond in 30 seconds
+  socket.on('game:rematchTimeout', () => {
+    clearPlayAgainTimer();
+    document.getElementById('rematch-timeout-notice')?.classList.remove('hidden');
+    document.getElementById('play-again-countdown-wrap')?.classList.add('hidden');
+    const btn = document.getElementById('btn-play-again');
+    if (btn) { btn.textContent = '🔄 PLAY AGAIN'; btn.disabled = false; }
+    // Auto-return to menu after 3 seconds
+    setTimeout(() => {
+      if (G.mode === 'online') returnToOnlineLobby('Rematch timed out.');
+      else showLanding();
+    }, 3000);
   });
 }
 
@@ -2102,6 +2181,7 @@ function aiStatChosen(statKey) {
 function pickStat(statKey) {
   if (G.mode === 'online') {
     if (G.phase !== 'pick' || G.myIndex !== G.pickerIndex) return;
+    clearPickTimer();
     socket.emit('round:pick', { statKey });
     return;
   }
@@ -2169,7 +2249,16 @@ function renderOnlineRound() {
   if (amPicker) {
     banner.textContent = '⚡ YOUR TURN — Pick a stat to challenge!';
     banner.className   = 'status-banner your-turn';
+    // Start 15s countdown for picker
+    startPickTimer(15, () => {
+      // Time's up — server will auto-pick; just update banner
+      if (G.phase === 'pick' && G.myIndex === G.pickerIndex) {
+        banner.textContent = '⏰ TIME'S UP — Auto-picking…';
+        banner.className   = 'status-banner wait';
+      }
+    });
   } else {
+    clearPickTimer();
     banner.innerHTML = `<span class="wait-dot"></span>&nbsp;&nbsp;${picker?.name || 'Opponent'} is picking…`;
     banner.className = 'status-banner wait';
   }
@@ -2464,9 +2553,35 @@ function playAgain() {
   if (G.mode==='ai') startAIGame();
   else {
     socket.emit('game:playAgain');
-    document.getElementById('btn-play-again').textContent = '⏳ WAITING…';
-    document.getElementById('btn-play-again').disabled = true;
+    const btn = document.getElementById('btn-play-again');
+    btn.textContent = '⏳ WAITING…';
+    btn.disabled = true;
+    document.getElementById('rematch-timeout-notice')?.classList.add('hidden');
+    startPlayAgainCountdown();
   }
+}
+
+function startPlayAgainCountdown() {
+  clearPlayAgainTimer();
+  G.playAgainSecondsLeft = 30;
+  const wrap = document.getElementById('play-again-countdown-wrap');
+  const el   = document.getElementById('play-again-countdown');
+  if (wrap) wrap.classList.remove('hidden');
+  if (el)   el.textContent = G.playAgainSecondsLeft;
+  G.playAgainTimer = setInterval(() => {
+    G.playAgainSecondsLeft--;
+    if (el) el.textContent = Math.max(0, G.playAgainSecondsLeft);
+    if (G.playAgainSecondsLeft <= 0) {
+      clearPlayAgainTimer();
+      // Server will send game:rematchTimeout, but handle locally too as fallback
+    }
+  }, 1000);
+}
+
+function clearPlayAgainTimer() {
+  if (G.playAgainTimer) { clearInterval(G.playAgainTimer); G.playAgainTimer = null; }
+  const wrap = document.getElementById('play-again-countdown-wrap');
+  if (wrap) wrap.classList.add('hidden');
 }
 
 // ═══════════════════════════════════════════════════════════════════
