@@ -251,8 +251,22 @@ function endGame(room, reason='normal') {
 function broadcastOnlinePlayers() {
   const list = Object.entries(onlinePlayers)
     .filter(([, p]) => p.status === 'lobby')
-    .map(([socketId, p]) => ({ socketId, name: p.name }));
+    .map(([socketId, p]) => ({ socketId, name: p.name, format: p.format, role: p.role }));
   io.emit('lobby:playerList', { players: list });
+}
+
+function broadcastOpenRooms() {
+  const open = Object.values(rooms)
+    .filter(r => !r.started && !r.finished && r.players.length < r.maxPlayers)
+    .map(r => ({
+      code: r.code,
+      format: r.format,
+      role: r.role || null,
+      maxPlayers: r.maxPlayers,
+      currentPlayers: r.players.length,
+      hostName: r.players[0]?.name || 'Host',
+    }));
+  io.emit('lobby:openRooms', { rooms: open });
 }
 
 function setPlayerStatus(socketId, status) {
@@ -267,10 +281,11 @@ io.on('connection', socket => {
   console.log(`[+] ${socket.id}`);
 
   // ── ENTER LOBBY ──
-  socket.on('lobby:enter', ({ playerName }) => {
-    onlinePlayers[socket.id] = { name: playerName || 'Player', status: 'lobby' };
+  socket.on('lobby:enter', ({ playerName, format, role }) => {
+    onlinePlayers[socket.id] = { name: playerName || 'Player', status: 'lobby', format: format || 'ODI', role: role || null };
     socket._playerName = playerName;
     broadcastOnlinePlayers();
+    broadcastOpenRooms();
   });
 
   // ── LEAVE LOBBY ──
@@ -292,7 +307,6 @@ io.on('connection', socket => {
     if (!challenger || !target) return socket.emit('challenge:error', { message: 'Player not available.' });
     if (target.status !== 'lobby') return socket.emit('challenge:error', { message: 'Player is busy.' });
 
-    // Cancel any previous pending challenge by this challenger
     if (pendingChallenges[socket.id]) {
       const old = pendingChallenges[socket.id];
       io.to(old.targetSocketId).emit('challenge:cancelled', { challengerName: challenger.name });
@@ -306,17 +320,25 @@ io.on('connection', socket => {
     io.to(targetSocketId).emit('challenge:received', {
       challengerSocketId: socket.id,
       challengerName: challenger.name,
+      challengerFormat: challenger.format,
+      challengerRole: challenger.role,
+      targetFormat: target.format,
+      targetRole: target.role,
     });
   });
 
   // ── ACCEPT CHALLENGE ──
-  socket.on('challenge:accept', ({ challengerSocketId }) => {
+  socket.on('challenge:accept', ({ challengerSocketId, agreedFormat, agreedRole }) => {
     const challenge = pendingChallenges[challengerSocketId];
     if (!challenge || challenge.targetSocketId !== socket.id) return;
     delete pendingChallenges[challengerSocketId];
 
+    const format = agreedFormat || onlinePlayers[challengerSocketId]?.format || 'ODI';
+    const role   = agreedRole   || null;
+
     const code = generateRoomCode();
-    const room = createRoom(code, 2, 'ODI');
+    const room = createRoom(code, 2, format);
+    room.role = role;
     rooms[code] = room;
     const p1name = onlinePlayers[challengerSocketId]?.name || 'Player 1';
     const p2name = onlinePlayers[socket.id]?.name || 'Player 2';
@@ -332,8 +354,8 @@ io.on('connection', socket => {
     setPlayerStatus(challengerSocketId, 'in-game');
     setPlayerStatus(socket.id,          'in-game');
 
-    io.to(challengerSocketId).emit('challenge:accepted', { opponentName: p2name, code });
-    io.to(socket.id).emit('challenge:accepted',          { opponentName: p1name, code });
+    io.to(challengerSocketId).emit('challenge:accepted', { opponentName: p2name, code, agreedFormat: format, agreedRole: role });
+    io.to(socket.id).emit('challenge:accepted',          { opponentName: p1name, code, agreedFormat: format, agreedRole: role });
 
     startGame(room);
   });
@@ -361,14 +383,16 @@ io.on('connection', socket => {
   });
 
   // ── CREATE ROOM (manual code) ──
-  socket.on('room:create', ({ playerName, maxPlayers=2, format='ODI' }) => {
+  socket.on('room:create', ({ playerName, maxPlayers=2, format='ODI', role=null }) => {
     const code = generateRoomCode();
-    const room = createRoom(code, Math.min(Math.max(maxPlayers,2),4), format);
+    const room = createRoom(code, Math.min(Math.max(maxPlayers,2),5), format);
+    room.role = role;
     rooms[code] = room;
     room.players.push({ socketId: socket.id, name: playerName||'Player 1', score: 0 });
     socketToRoom[socket.id] = code;
     socket.join(code);
     socket.emit('room:created', { code, maxPlayers: room.maxPlayers });
+    broadcastOpenRooms();
   });
 
   // ── JOIN ROOM (manual code) ──
@@ -391,6 +415,7 @@ io.on('connection', socket => {
         canStart: room.players.length >= MIN_PLAYERS,
       });
     });
+    broadcastOpenRooms();
   });
 
   // ── HOST STARTS GAME ──
