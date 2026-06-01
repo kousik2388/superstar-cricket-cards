@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Trumpcard V18 — LoadingScreen Mismatch MultiPlayer OpenRooms</title>
+<title>Superstar Cricket Cards — V22</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -387,7 +387,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V21</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V22</div>
   </div>
 </div>
 
@@ -2253,7 +2253,7 @@ function renderOnlineRound() {
     startPickTimer(15, () => {
       // Time's up — server will auto-pick; just update banner
       if (G.phase === 'pick' && G.myIndex === G.pickerIndex) {
-        banner.textContent = '⏰ TIME'S UP — Auto-picking…';
+        banner.textContent = `⏰ TIME'S UP — Auto-picking…`;
         banner.className   = 'status-banner wait';
       }
     });
