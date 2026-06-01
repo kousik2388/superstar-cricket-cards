@@ -482,6 +482,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div id="cointoss-label" style="font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:4px;color:var(--gold);"></div>
       <div id="cointoss-sub" style="font-size:14px;color:var(--gray);"></div>
     </div>
+    <div id="cointoss-countdown-wrap" class="hidden" style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:4px;color:var(--gray);margin-bottom:4px;">
+      TOSS IN <span id="cointoss-countdown">3</span>
+    </div>
     <button id="cointoss-continue-btn" class="btn-primary hidden" style="max-width:280px;" onclick="afterCoinToss()">LET'S PLAY ▶</button>
   </div>
 </div>
@@ -769,7 +772,10 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div class="dc-icon">📡</div>
     <div class="dc-title">PLAYER LEFT</div>
     <div class="dc-text" id="dc-text">A player disconnected.</div>
-    <button class="btn-exit" onclick="forceReturnToMenu()">MAIN MENU</button>
+    <div id="dc-countdown-wrap" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;color:var(--gray);margin:6px 0 2px;">
+      RETURNING TO MAIN MENU IN <span id="dc-countdown">5</span>s
+    </div>
+    <button class="btn-exit" onclick="forceReturnToMenu()">MAIN MENU NOW</button>
   </div>
 </div>
 
@@ -904,11 +910,17 @@ const G = {
   pickSecondsLeft: 15,
   playAgainTimer: null,     // client-side play-again wait countdown
   playAgainSecondsLeft: 30,
+  _dcCountdownTimer: null,  // disconnect overlay countdown
+  _confirmTimer: null,       // non-picker confirm countdown
+  _confirmSecsLeft: 10,
 };
 
 // ── FORCE RETURN TO MENU ─────────────────────────────────────────
 function forceReturnToMenu() {
   G.inGame = false;
+  if (G._dcCountdownTimer) { clearInterval(G._dcCountdownTimer); G._dcCountdownTimer = null; }
+  clearPickTimer();
+  clearPlayAgainTimer();
   ['disconnect-overlay','result-overlay','quit-overlay','challenge-overlay'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
@@ -918,6 +930,7 @@ function forceReturnToMenu() {
   }
   G.players = []; G.myHand = []; G.oppCards = {};
   G.roomCode = null; G.isHost = false;
+  G.inGame = false; G.gameReady = false; G.arranging = false;
   showLanding();
 }
 
@@ -945,6 +958,35 @@ function clearPickTimer() {
   if (G.pickTimer) { clearInterval(G.pickTimer); G.pickTimer = null; }
   const wrap = document.getElementById('pick-countdown-wrap');
   if (wrap) wrap.classList.add('hidden');
+}
+
+// ── CONFIRM TIMER (non-picker auto-confirms in 10s) ──────────────
+function startConfirmTimer(seconds, statKey) {
+  if (G._confirmTimer) { clearInterval(G._confirmTimer); G._confirmTimer = null; }
+  G._confirmSecsLeft = seconds;
+  const banner = document.getElementById('status-banner');
+  const pickerName = G.players[G.pickerIndex]?.name || 'Opponent';
+  const updateBanner = () => {
+    if (banner && G.phase === 'confirm') {
+      banner.textContent = `${pickerName} chose ${statLabel(statKey)} — TAP or auto-confirms in ${Math.max(0,G._confirmSecsLeft)}s`;
+      banner.className = 'status-banner confirm';
+    }
+  };
+  updateBanner();
+  G._confirmTimer = setInterval(() => {
+    G._confirmSecsLeft--;
+    updateBanner();
+    if (G._confirmSecsLeft <= 0) {
+      clearConfirmTimer();
+      if (G.phase === 'confirm' && !G.confirmedOnline && G.myIndex !== G.pickerIndex) {
+        confirmStat(); // auto-confirm
+      }
+    }
+  }, 1000);
+}
+
+function clearConfirmTimer() {
+  if (G._confirmTimer) { clearInterval(G._confirmTimer); G._confirmTimer = null; }
 }
 
 // ── ONLINE LOBBY ─────────────────────────────────────────────────
@@ -1433,13 +1475,10 @@ function initSocket() {
     if (format) G.selectedFormat = format;
     if (role !== undefined) G.selectedRole = role;
 
-    // Show matched screen for 2 seconds, then auto-advance to coin toss → arrange
+    // Show MATCH FOUND → 3-2-1 countdown → coin toss auto-starts
     const oppPlayer = G.players.find((_,i) => i !== G.myIndex);
     showMatchmakingScreen('matched', oppPlayer?.name || 'Opponent');
-    // Auto-proceed after 2 seconds — no button needed
-    setTimeout(() => {
-      if (G.inGame && G.mode === 'online') showCoinTossOnline();
-    }, 2200);
+    startPreTossCountdown();
   });
 
   socket.on('round:start', (payload) => {
@@ -1454,15 +1493,18 @@ function initSocket() {
     applyRoundStart(payload);
   });
 
-  socket.on('round:statChosen', ({ statKey, pickerName, youMustConfirm }) => {
+  socket.on('round:statChosen', ({ statKey, pickerName, youMustConfirm, confirmTimeLimit }) => {
     G.phase      = 'confirm';
     G.chosenStat = statKey;
+    G.confirmedOnline = false;
     updateScoreboardBar();
     const banner = document.getElementById('status-banner');
     if (youMustConfirm) {
       banner.textContent = `${pickerName} chose ${statLabel(statKey)} — TAP TO CONFIRM!`;
       banner.className   = 'status-banner confirm';
       renderMyCard({ blink: statKey });
+      // Start confirm countdown — auto-confirms in 10s if player doesn't tap
+      startConfirmTimer(confirmTimeLimit || 10, statKey);
     } else {
       banner.textContent = `You chose ${statLabel(statKey)} — waiting for others…`;
       banner.className   = 'status-banner wait';
@@ -1473,6 +1515,7 @@ function initSocket() {
 
   socket.on('round:result', ({ round, statKey, ranked, scores, allCards, isLastRound, nextPickerIndex, nextPickerName, yourIndex }) => {
     clearPickTimer();
+    clearConfirmTimer();
     G.phase       = 'result';
     G.chosenStat  = statKey;
     G.pickerIndex = nextPickerIndex;
@@ -1517,6 +1560,16 @@ function initSocket() {
     document.getElementById('rematch-notice').classList.remove('hidden');
   });
 
+  // Server auto-resolved confirm because non-picker didn't tap in time
+  socket.on('round:confirmTimeout', () => {
+    clearConfirmTimer();
+    const banner = document.getElementById('status-banner');
+    if (banner && G.phase === 'confirm') {
+      banner.textContent = `⏰ Auto-confirmed!`;
+      banner.className   = 'status-banner wait';
+    }
+  });
+
   // Server auto-picked a stat because picker ran out of time
   socket.on('round:pickTimeout', ({ autoStat }) => {
     clearPickTimer();
@@ -1535,6 +1588,11 @@ function initSocket() {
   socket.on('arrange:playerReady', ({ name }) => {
     const el = document.getElementById('waiting-for-text');
     if (el) el.textContent = `${name} is ready! Waiting for all players…`;
+  });
+
+  // Server says all players pressed LET'S PLAY → go to arrange screen together
+  socket.on('arrange:start', () => {
+    if (G.inGame) showArrangePhase();
   });
 
   // Rematch timed out — opponent didn't respond in 30 seconds
@@ -1579,8 +1637,24 @@ function showLobby() {
   showPage('page-lobby');
 }
 function showDisconnectOverlay(msg) {
+  clearPickTimer();
+  clearPlayAgainTimer();
   document.getElementById('dc-text').textContent = msg;
   document.getElementById('disconnect-overlay').classList.remove('hidden');
+  // Auto-return to main menu in 5 seconds
+  let secs = 5;
+  const countEl = document.getElementById('dc-countdown');
+  if (countEl) countEl.textContent = secs;
+  if (G._dcCountdownTimer) clearInterval(G._dcCountdownTimer);
+  G._dcCountdownTimer = setInterval(() => {
+    secs--;
+    if (countEl) countEl.textContent = Math.max(0, secs);
+    if (secs <= 0) {
+      clearInterval(G._dcCountdownTimer);
+      G._dcCountdownTimer = null;
+      forceReturnToMenu();
+    }
+  }, 1000);
 }
 function setLobbyError(msg) { document.getElementById('lobby-error').textContent=msg; }
 
@@ -2067,32 +2141,53 @@ function afterCoinToss() {
   showArrangePhase();
 }
 
-// Online coin toss — spins, then shows server-decided toss winner
+// Pre-toss: show "TOSS IN 3,2,1" on matchmaking screen then go to coin toss
+function startPreTossCountdown() {
+  let count = 3;
+  const sub = document.getElementById('mm-sub');
+  const wrap = document.getElementById('cointoss-countdown-wrap');
+  // Show countdown on matchmaking screen
+  if (sub) sub.textContent = `Coin toss starts in ${count}…`;
+  const timer = setInterval(() => {
+    count--;
+    if (count > 0) {
+      if (sub) sub.textContent = `Coin toss starts in ${count}…`;
+    } else {
+      clearInterval(timer);
+      if (G.inGame && G.mode === 'online') showCoinTossOnline();
+    }
+  }, 1000);
+}
+
+// Online coin toss — auto-spins then shows result + LET'S PLAY button
 function showCoinTossOnline() {
   showPage('page-cointoss');
   const coin   = document.getElementById('coin');
   const label  = document.getElementById('cointoss-label');
   const sub    = document.getElementById('cointoss-sub');
   const btn    = document.getElementById('cointoss-continue-btn');
+  const cdWrap = document.getElementById('cointoss-countdown-wrap');
 
   label.textContent = '';
   sub.textContent   = '';
   btn.classList.add('hidden');
+  if (cdWrap) cdWrap.classList.add('hidden');
   coin.className    = '';
   coin.textContent  = '🪙';
-
   coin.classList.add('coin-spinning');
 
   setTimeout(() => {
     coin.classList.remove('coin-spinning');
     coin.classList.add('coin-landed');
-
-    // Reveal the toss result using pickerIndex from round:start
-    // (which was buffered in G.pendingRoundStart)
     revealOnlineTossResult();
   }, 1800);
 
-  btn.onclick = () => showArrangePhase();
+  // LET'S PLAY now emits toss:ready → server waits for both players
+  btn.onclick = () => {
+    btn.disabled = true;
+    btn.textContent = '⏳ WAITING FOR OPPONENT…';
+    if (socket) socket.emit('toss:ready');
+  };
 }
 
 function revealOnlineTossResult() {
@@ -2200,6 +2295,7 @@ function confirmStat() {
   if (G.mode === 'online') {
     if (G.phase !== 'confirm' || G.myIndex === G.pickerIndex || G.confirmedOnline) return;
     G.confirmedOnline = true;
+    clearConfirmTimer();
     socket.emit('round:confirm');
     return;
   }
