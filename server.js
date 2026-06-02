@@ -104,7 +104,8 @@ function rankPlayers(players, hands, round, statKey) {
 function createRoom(code, maxPlayers=2, format='ODI') {
   return {
     code, format, maxPlayers,
-    players: [],   // [{ socketId, name, score }]
+    players: [],     // [{ socketId, name, score }]
+    spectators: [],  // [{ socketId, name }]
     hands: {},
     round: 0,
     pickerIndex: 0,
@@ -113,13 +114,13 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     confirmAcks: new Set(),
     nextAcks: new Set(),
     playAgainAcks: new Set(),
-    arrangeAcks: new Set(),   // tracks who has finished arranging
-    tossReadyAcks: new Set(), // tracks who pressed LET'S PLAY on toss screen
+    arrangeAcks: new Set(),
+    tossReadyAcks: new Set(),
     started: false,
     finished: false,
-    pickTimer: null,          // server-side 15s stat-pick timeout
-    confirmTimer: null,       // server-side 10s confirm timeout
-    playAgainTimer: null,     // server-side 30s play-again timeout
+    pickTimer: null,
+    confirmTimer: null,
+    playAgainTimer: null,
   };
 }
 
@@ -186,6 +187,20 @@ function startGame(room) {
   // Do NOT call emitRound yet — wait for all players to finish arranging (hand:reorder)
 }
 
+function broadcastSpectateState(room) {
+  if (!room.spectators || room.spectators.length === 0) return;
+  const state = {
+    players: room.players.map(p => ({ name: p.name, socketId: p.socketId, score: p.score })),
+    round: room.round,
+    totalRounds: TOTAL_ROUNDS,
+    pickerIndex: room.pickerIndex,
+    pickerName: room.players[room.pickerIndex]?.name,
+    roundPhase: room.roundPhase,
+    roundStat: room.roundStat,
+  };
+  room.spectators.forEach(s => io.to(s.socketId).emit('spectate:roundUpdate', state));
+}
+
 function emitRound(room) {
   room.roundStat   = null;
   room.roundPhase  = 'pick';
@@ -212,6 +227,8 @@ function emitRound(room) {
       pickTimeLimit: 15,
     });
   });
+
+  broadcastSpectateState(room);
 
   // Server-side 15s pick timeout — auto-pick a random stat if picker doesn't respond
   room.pickTimer = setTimeout(() => {
@@ -471,6 +488,9 @@ io.on('connection', socket => {
       io.to(p.socketId).emit('room:playerJoined', {
         players: playerList, maxPlayers: room.maxPlayers,
         canStart: room.players.length >= MIN_PLAYERS,
+        // Tell joining player the room's format/role so client can sync
+        format: room.format,
+        role: room.role || null,
       });
     });
     broadcastOpenRooms();
@@ -542,6 +562,48 @@ io.on('connection', socket => {
       room.arrangeAcks = new Set();
       emitRound(room);
     }
+  });
+
+  // ── SPECTATE ──
+  socket.on('spectate:join', ({ spectatorName, code }) => {
+    const upper = (code||'').toUpperCase();
+    const room  = rooms[upper];
+    if (!room) return socket.emit('room:error', { message: 'Room not found.' });
+    if (!room.started) return socket.emit('room:error', { message: 'Game not started yet.' });
+
+    const name = spectatorName || 'Spectator';
+    room.spectators.push({ socketId: socket.id, name });
+    socketToRoom[socket.id] = upper;
+    socket.join(upper);
+
+    // Send current game state to spectator
+    const scores = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
+    socket.emit('spectate:state', {
+      players: room.players.map(p => ({ name: p.name, socketId: p.socketId, score: p.score })),
+      round: room.round,
+      totalRounds: TOTAL_ROUNDS,
+      format: room.format,
+      role: room.role || null,
+      scores,
+      pickerIndex: room.pickerIndex,
+      pickerName: room.players[room.pickerIndex]?.name,
+      roundPhase: room.roundPhase,
+      roundStat: room.roundStat,
+    });
+    // Notify players
+    room.players.forEach(p => io.to(p.socketId).emit('spectate:joined', { name }));
+    console.log(`[spectate] ${name} joined room ${upper}`);
+  });
+
+  socket.on('spectate:leave', () => {
+    const code = socketToRoom[socket.id];
+    if (!code) return;
+    const room = rooms[code];
+    if (room) {
+      room.spectators = room.spectators.filter(s => s.socketId !== socket.id);
+    }
+    delete socketToRoom[socket.id];
+    socket.leave(code);
   });
 
   // ── TOSS READY (both press LET'S PLAY → go to arrange together) ──
@@ -620,9 +682,16 @@ io.on('connection', socket => {
       room.players.forEach(p => { p.score = 0; });
       startGame(room);
     } else {
-      // First player to request rematch — notify others and start 30s timeout
-      const other = room.players.find(p => p.socketId !== socket.id);
-      if (other) io.to(other.socketId).emit('game:opponentWantsRematch');
+      // First/subsequent player to request rematch — notify ALL others and start 30s timeout
+      room.players.forEach(p => {
+        if (p.socketId !== socket.id) {
+          io.to(p.socketId).emit('game:opponentWantsRematch', {
+            name: room.players.find(x => x.socketId === socket.id)?.name || 'A player',
+            readyCount: room.playAgainAcks.size,
+            totalCount:  room.players.length,
+          });
+        }
+      });
       if (room.playAgainTimer) clearTimeout(room.playAgainTimer);
       room.playAgainTimer = setTimeout(() => {
         if (!room || room.playAgainAcks.size < room.players.length) {
