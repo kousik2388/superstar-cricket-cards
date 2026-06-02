@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V23</title>
+<title>Superstar Cricket Cards — V25</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -33,6 +33,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.02) 40px);
   pointer-events:none}
 .page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.page-loading-screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center}
 .hidden{display:none!important}
 
 /* BUTTONS */
@@ -394,7 +395,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 
 <!-- ══════════════ SUPERSTAR GAMES LOADING SCREEN ══════════════ -->
-<div id="page-loading" class="page" style="
+<div id="page-loading" class="page-loading-screen" style="
   background:radial-gradient(ellipse 80% 60% at 50% 40%,#0a1a2e 0%,#050d14 100%);
   justify-content:center;align-items:center;min-height:100vh;
   display:flex;flex-direction:column;gap:0;">
@@ -412,7 +413,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V23</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V25</div>
   </div>
 </div>
 
@@ -482,18 +483,20 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div class="page-header" style="border:none;padding:0;">SELECT YOUR SQUAD</div>
       <div style="font-size:12px;color:var(--gray);margin-top:6px;letter-spacing:.5px;line-height:1.5;">Your 10 cards will be picked from your chosen squad.<br>All-rounders appear in both.</div>
     </div>
-    <!-- Country Filter -->
-    <div style="width:100%;max-width:300px;">
+    <!-- Country Filter (AI mode only) -->
+    <div id="country-filter-wrap" style="width:100%;max-width:300px;">
       <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;">🌍 FILTER BY COUNTRY (OPTIONAL)</div>
       <div style="position:relative;">
-        <select id="country-filter-select" onchange="G.selectedCountry=this.value"
-          style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
-          border-radius:6px;padding:10px 12px;color:var(--white);font-family:'Rajdhani',sans-serif;
-          font-size:13px;letter-spacing:1px;cursor:pointer;appearance:none;-webkit-appearance:none;">
-          <option value="">All Countries</option>
+        <select id="country-filter-select" onchange="onCountryChange(this.value)"
+          style="width:100%;background:#1a3a28;border:1px solid rgba(240,192,64,.4);
+          border-radius:6px;padding:10px 12px;color:#f5f0e8;font-family:'Rajdhani',sans-serif;
+          font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;
+          appearance:none;-webkit-appearance:none;">
+          <option value="" style="background:#1a3a28;color:#f5f0e8;">All Countries</option>
         </select>
         <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gold);">▼</div>
       </div>
+      <div id="country-card-hint" style="font-size:11px;color:var(--gray);text-align:center;min-height:14px;margin-top:4px;letter-spacing:.5px;"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
       <button class="btn-primary" onclick="selectRole('batter')" style="display:flex;align-items:center;justify-content:center;gap:10px;">
@@ -564,9 +567,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 <!-- COLLECTION / PACK OPENING -->
 <div id="page-collection" class="page hidden" style="padding:0;overflow-y:auto;">
-  <div style="padding:20px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
-    <div class="page-header" style="border:none;padding:0;font-size:22px;">🎴 COLLECTION</div>
-    <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="showLanding()">← BACK</button>
+  <div style="padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px;text-align:center;">
+    <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:4px;color:var(--gold);">🎴 COLLECTION</div>
   </div>
   <!-- Pack opening -->
   <div style="padding:8px 16px 16px;">
@@ -602,15 +604,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     </div>
     <!-- Card grid -->
     <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:8px;">YOUR CARDS</div>
-    <div id="collection-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding-bottom:24px;"></div>
+    <div id="collection-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding-bottom:8px;"></div>
+    <div style="padding:8px 0 28px;display:flex;justify-content:center;">
+      <button class="btn-secondary" style="max-width:220px;width:100%;" onclick="showLanding()">← BACK TO MENU</button>
+    </div>
   </div>
 </div>
 
 <!-- LEADERBOARD / HISTORY -->
 <div id="page-leaderboard" class="page hidden" style="padding:0;overflow-y:auto;">
-  <div style="padding:20px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
-    <div class="page-header" style="border:none;padding:0;font-size:22px;">🏆 HISTORY</div>
-    <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="showLanding()">← BACK</button>
+  <div style="padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px;text-align:center;">
+    <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:4px;color:var(--gold);">🏆 MATCH HISTORY</div>
   </div>
   <div style="padding:8px 16px;">
     <!-- Win/Loss summary -->
@@ -629,7 +633,10 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       </div>
     </div>
     <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:8px;">RECENT MATCHES</div>
-    <div id="match-history-list" style="display:flex;flex-direction:column;gap:8px;padding-bottom:24px;"></div>
+    <div id="match-history-list" style="display:flex;flex-direction:column;gap:8px;padding-bottom:8px;"></div>
+    <div style="padding:8px 0 28px;display:flex;justify-content:center;">
+      <button class="btn-secondary" style="max-width:220px;width:100%;" onclick="showLanding()">← BACK TO MENU</button>
+    </div>
   </div>
 </div>
 
@@ -2236,6 +2243,9 @@ function showFormatSelect() {
   G.onlineMode = false;
   document.getElementById('format-player-count-row')?.classList.add('hidden');
   document.getElementById('ai-difficulty-row')?.classList.remove('hidden');
+  // Show country filter in AI mode
+  const cfWrap = document.getElementById('country-filter-wrap');
+  if (cfWrap) cfWrap.style.display = '';
   showPage('page-format');
 }
 
@@ -2244,21 +2254,36 @@ function showFormatSelectOnline() {
   G.onlineMode = true;
   document.getElementById('format-player-count-row')?.classList.remove('hidden');
   document.getElementById('ai-difficulty-row')?.classList.add('hidden');
+  // Hide country filter in online mode (deck is server-side)
+  const cfWrap = document.getElementById('country-filter-wrap');
+  if (cfWrap) cfWrap.style.display = 'none';
   showPage('page-format');
 }
 
 function selectFormat(fmt) {
   G.selectedFormat = fmt;
   G.selectedCountry = '';
+  const hint = document.getElementById('country-card-hint');
+  if (hint) hint.textContent = '';
   document.getElementById('role-format-badge').textContent = fmt;
-  // Populate country filter dropdown
+  // IPL has team-based cards — country filter not applicable
+  const cfWrap = document.getElementById('country-filter-wrap');
   const sel = document.getElementById('country-filter-select');
-  if (sel) {
-    const deck = getDeckForFormat(fmt);
-    const countries = getCountries(deck);
-    sel.innerHTML = '<option value="">All Countries</option>' +
-      countries.map(c => `<option value="${c}">${c}</option>`).join('');
-    sel.value = '';
+  if (fmt === 'IPL') {
+    if (cfWrap) cfWrap.style.display = 'none';
+    G.selectedCountry = '';
+  } else {
+    if (cfWrap) cfWrap.style.display = '';
+    if (sel) {
+      const deck = getDeckForFormat(fmt);
+      const allCountries = getCountries(deck);
+      const eligible = allCountries.filter(country => {
+        return deck.filter(c => c.country === country).length >= 10;
+      });
+      sel.innerHTML = '<option value="">All Countries</option>' +
+        eligible.map(ctry => `<option value="${ctry}">${ctry}</option>`).join('');
+      sel.value = '';
+    }
   }
   showPage('page-role');
   const roleBackBtn = document.querySelector('#page-role .btn-danger');
@@ -2283,6 +2308,24 @@ function filterByCountry(deck, country) {
 // Get all unique countries in a deck
 function getCountries(deck) {
   return [...new Set(deck.map(c => c.country))].sort();
+}
+
+function onCountryChange(val) {
+  G.selectedCountry = val;
+  const hint = document.getElementById('country-card-hint');
+  if (!hint) return;
+  if (!val) { hint.textContent = ''; return; }
+  const deck = getDeckForFormat(G.selectedFormat || 'ODI');
+  const countryCards = filterByCountry(deck, val);
+  const batters = filterByCountry(getSquadByRoleFromDeck(deck, 'batter'), val);
+  const bowlers = filterByCountry(getSquadByRoleFromDeck(deck, 'bowler'), val);
+  if (countryCards.length === 0) {
+    hint.textContent = 'No cards available for this country in this format';
+    hint.style.color = 'var(--red)';
+  } else {
+    hint.textContent = `${countryCards.length} cards · ${batters.length} batters · ${bowlers.length} bowlers`;
+    hint.style.color = 'var(--green-win)';
+  }
 }
 
 function selectRole(role) {
@@ -2347,11 +2390,27 @@ function startAIGame() {
   computeDeckAverages(fullDeck);
   let squad = G.selectedRole ? getSquadByRoleFromDeck(fullDeck, G.selectedRole) : fullDeck;
   if (G.selectedCountry) {
-    const filtered = filterByCountry(squad, G.selectedCountry);
-    if (filtered.length >= 20) squad = filtered;
-    // else silently fall back to unfiltered squad
+    const countryRoleFiltered = filterByCountry(squad, G.selectedCountry);
+    const countryAllFiltered  = filterByCountry(fullDeck, G.selectedCountry);
+    // Prefer country+role; fall back to country-only if role filter leaves too few
+    if (countryRoleFiltered.length >= 10) {
+      squad = countryRoleFiltered;
+    } else if (countryAllFiltered.length >= 10) {
+      squad = countryAllFiltered;  // drop role filter, keep country
+    }
+    // Since dropdown only shows countries with >=10 cards, squad is always usable
   }
-  const pool  = squad.length >= 20 ? squad : fullDeck;
+  // Build pool — pad to 20 if needed (shouldn't happen with >=10 threshold but safe)
+  let pool;
+  if (squad.length >= 20) {
+    pool = squad;
+  } else if (squad.length >= 10) {
+    pool = [];
+    while (pool.length < 20) pool = pool.concat(squad);
+    pool = pool.slice(0, 20);
+  } else {
+    pool = fullDeck;
+  }
   const deck  = shuffle(pool);
 
   G.myHand = deck.slice(0, 10);
@@ -2931,6 +2990,25 @@ function showFinalResult(finalRanking, myIndex) {
   btn.textContent = '🔄 PLAY AGAIN';
   btn.disabled    = false;
   btn.onclick     = playAgain;
+
+  // Save match to history
+  {
+    let ranking2 = finalRanking;
+    if (!ranking2) ranking2 = [...G.players].sort((a,b)=>b.score-a.score).map(p=>({name:p.name,socketId:p.socketId,score:p.score}));
+    const _myId2 = G.mode==='ai' ? 'player' : (typeof socket!=='undefined'?socket?.id:null);
+    const _myE2  = ranking2.find(r=>r.socketId===_myId2);
+    const _myR2  = ranking2.indexOf(_myE2);
+    const _out2  = _myR2===0 ? (ranking2.filter(r=>r.score===ranking2[0].score).length>1?'draw':'win') : 'loss';
+    const _oppE2 = ranking2.find(r=>r.socketId!==_myId2);
+    saveMatchResult({
+      outcome:  _out2,
+      format:   G.selectedFormat||'ODI',
+      role:     G.selectedRole||null,
+      opponent: G.mode==='ai'?'AI ('+(G.aiDifficulty||'medium')+')':(_oppE2?.name||'Opponent'),
+      myScore:  _myE2?.score??0,
+      oppScore: _oppE2?.score??0,
+    });
+  }
 
   showPage('page-final');
 }
@@ -4778,31 +4856,7 @@ function showLeaderboard() {
   showPage('page-leaderboard');
 }
 
-// Hook into showFinalResult to save match history
-const _origShowFinalResult = showFinalResult;
-function showFinalResult(finalRanking, myIndex) {
-  _origShowFinalResult(finalRanking, myIndex);
-  // Save to history (only save once per match)
-  if (G.inGame === false) {
-    let ranking = finalRanking;
-    if (!ranking) {
-      ranking = [...G.players].sort((a,b)=>b.score-a.score).map(p=>({name:p.name,socketId:p.socketId,score:p.score}));
-    }
-    const mySocketId = G.mode==='ai' ? 'player' : (typeof socket !== 'undefined' ? socket?.id : null);
-    const myEntry = ranking.find(r => r.socketId === mySocketId);
-    const myRank = ranking.indexOf(myEntry);
-    const outcome = myRank === 0 ? (ranking.filter(r=>r.score===ranking[0].score).length>1 ? 'draw' : 'win') : 'loss';
-    const oppEntry = ranking.find(r => r.socketId !== mySocketId);
-    saveMatchResult({
-      outcome,
-      format: G.selectedFormat || 'ODI',
-      role: G.selectedRole || null,
-      opponent: G.mode === 'ai' ? 'AI (' + (G.aiDifficulty||'medium') + ')' : (oppEntry?.name || 'Opponent'),
-      myScore: myEntry?.score ?? 0,
-      oppScore: oppEntry?.score ?? 0,
-    });
-  }
-}
+
 
 // ═══════════════════════════════════════════════════════════════════
 // SPECTATE
@@ -4864,9 +4918,8 @@ function wireSpectateListeners() {
 
 // Boot — show loading screen, landing appears after tap
 computeDeckAverages();
-// Start with ALL pages hidden except loading
+// Hide all game pages — page-loading-screen is NOT in .page so stays visible
 document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-document.getElementById('page-loading').classList.remove('hidden');
 initLoadingScreen();
 </script>
 </body>
