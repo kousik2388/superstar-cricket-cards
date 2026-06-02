@@ -121,6 +121,7 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     pickTimer: null,
     confirmTimer: null,
     playAgainTimer: null,
+    fillTimer: null,       // 60s wait for players to fill room before force-starting
   };
 }
 
@@ -310,6 +311,7 @@ function endGame(room, reason='normal') {
   if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
   if (room.confirmTimer) { clearTimeout(room.confirmTimer); room.confirmTimer = null; }
   if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
+  if (room.fillTimer) { clearTimeout(room.fillTimer); room.fillTimer = null; }
 
   const sorted  = [...room.players].sort((a,b) => b.score - a.score);
   const scores  = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
@@ -468,6 +470,47 @@ io.on('connection', socket => {
     socket.join(code);
     socket.emit('room:created', { code, maxPlayers: room.maxPlayers });
     broadcastOpenRooms();
+
+    // For multi-player rooms: start a 60s fill timer
+    // If room isn't full after 60s but has >=2 players, force-start with whoever joined
+    if (room.maxPlayers > 2) {
+      let secondsLeft = 60;
+      // Broadcast countdown every 10s, then every 1s for last 10s
+      const countdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (room.started || room.finished) { clearInterval(countdownInterval); return; }
+        // Broadcast time update to all in room
+        const isFinalCountdown = secondsLeft <= 10;
+        if (isFinalCountdown || secondsLeft % 10 === 0) {
+          room.players.forEach(p => io.to(p.socketId).emit('room:fillCountdown', {
+            secondsLeft,
+            playersNow: room.players.length,
+            maxPlayers: room.maxPlayers,
+          }));
+        }
+        if (secondsLeft <= 0) {
+          clearInterval(countdownInterval);
+          room.fillTimer = null;
+          if (!room.started && !room.finished) {
+            if (room.players.length >= MIN_PLAYERS) {
+              // Force-start with current players
+              room.players.forEach(p => io.to(p.socketId).emit('room:fillTimeout', {
+                playersJoined: room.players.length,
+                maxPlayers: room.maxPlayers,
+              }));
+              startGame(room);
+            } else {
+              // Not enough players — dissolve room
+              room.players.forEach(p => io.to(p.socketId).emit('room:dissolved', {
+                reason: 'Not enough players joined in time.',
+              }));
+              delete rooms[code];
+            }
+          }
+        }
+      }, 1000);
+      room.fillTimer = countdownInterval; // store interval id (not timeout) for cleanup
+    }
   });
 
   // ── JOIN ROOM (manual code) ──
@@ -494,6 +537,15 @@ io.on('connection', socket => {
       });
     });
     broadcastOpenRooms();
+
+    // If room is now full, clear fill timer and start immediately
+    if (room.players.length >= room.maxPlayers) {
+      if (room.fillTimer) { clearInterval(room.fillTimer); room.fillTimer = null; }
+      // Brief pause so all clients see the full lobby before game starts
+      setTimeout(() => {
+        if (!room.started && !room.finished) startGame(room);
+      }, 1500);
+    }
   });
 
   // ── HOST STARTS GAME ──
@@ -504,6 +556,7 @@ io.on('connection', socket => {
     if (!room || room.started) return;
     if (room.players[0].socketId !== socket.id) return;
     if (room.players.length < MIN_PLAYERS) return;
+    if (room.fillTimer) { clearInterval(room.fillTimer); room.fillTimer = null; }
     startGame(room);
   });
 
