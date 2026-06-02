@@ -814,6 +814,24 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     </div>
     <div class="waiting-for" id="waiting-for-text">Looking for an opponent…</div>
     <div class="player-list" id="lobby-player-list"></div>
+
+    <!-- Fill countdown (shown for multi-player rooms) -->
+    <div id="fill-countdown-wrap" class="hidden" style="width:100%;max-width:320px;text-align:center;">
+      <div style="background:rgba(240,192,64,.07);border:1px solid rgba(240,192,64,.2);border-radius:10px;padding:12px 16px;">
+        <div style="font-size:11px;letter-spacing:2px;color:var(--gray);margin-bottom:4px;">GAME STARTS IN</div>
+        <div id="fill-countdown-secs" style="font-family:'Bebas Neue',cursive;font-size:40px;color:var(--gold);line-height:1;">60</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">unless all players join sooner</div>
+      </div>
+    </div>
+
+    <!-- Fill timeout notice -->
+    <div id="fill-timeout-notice" class="hidden"
+      style="background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.3);border-radius:8px;
+      padding:10px 16px;text-align:center;width:100%;max-width:320px;">
+      <div style="font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:2px;color:var(--gold);">⏰ TIME'S UP</div>
+      <div id="fill-timeout-msg" style="font-size:12px;color:var(--gray);margin-top:3px;">Starting with current players…</div>
+    </div>
+
     <div id="start-btn-wrap" class="hidden" style="width:100%;max-width:320px;">
       <button class="btn-primary" id="start-game-btn" onclick="hostStartGame()" disabled>
         WAITING FOR MORE PLAYERS…
@@ -1688,9 +1706,13 @@ function initSocket() {
     updateLobbyPlayerList(players, maxPlayers);
     if (G.isHost) {
       const btn = document.getElementById('start-game-btn');
-      if (canStart) {
+      if (players.length >= maxPlayers) {
+        // Room full — server will auto-start in 1.5s, just show that
+        btn.disabled = true;
+        btn.textContent = `✅ ROOM FULL — STARTING…`;
+      } else if (canStart) {
         btn.disabled = false;
-        btn.textContent = `START GAME (${players.length}/${maxPlayers} Players)`;
+        btn.textContent = `▶ START NOW (${players.length}/${maxPlayers} ready)`;
       } else {
         btn.disabled = true;
         btn.textContent = `WAITING FOR MORE PLAYERS… (${players.length}/${maxPlayers})`;
@@ -1699,6 +1721,39 @@ function initSocket() {
   });
 
   socket.on('room:error', ({ message }) => { setLobbyError(message); showLobby(); });
+
+  // Fill countdown tick from server
+  socket.on('room:fillCountdown', ({ secondsLeft, playersNow, maxPlayers }) => {
+    const el = document.getElementById('fill-countdown-secs');
+    if (el) {
+      el.textContent = secondsLeft;
+      el.style.color = secondsLeft <= 10 ? 'var(--red)' : secondsLeft <= 30 ? 'var(--gold)' : 'var(--gold)';
+      if (secondsLeft <= 10 && secondsLeft > 0) SFX.play('timer');
+    }
+    const wrap = document.getElementById('fill-countdown-wrap');
+    if (wrap) wrap.classList.remove('hidden');
+    // Update start button text too
+    if (G.isHost) {
+      const btn = document.getElementById('start-game-btn');
+      if (btn && !btn.disabled === false) {
+        btn.textContent = `START NOW (${playersNow}/${maxPlayers}) — or wait ${secondsLeft}s`;
+      }
+    }
+  });
+
+  // Server timed out waiting for players — starting with whoever joined
+  socket.on('room:fillTimeout', ({ playersJoined, maxPlayers }) => {
+    document.getElementById('fill-countdown-wrap')?.classList.add('hidden');
+    const notice = document.getElementById('fill-timeout-notice');
+    const msg    = document.getElementById('fill-timeout-msg');
+    if (notice) notice.classList.remove('hidden');
+    if (msg)    msg.textContent = `Only ${playersJoined}/${maxPlayers} players joined — starting now!`;
+  });
+
+  // Room dissolved — not enough players ever joined
+  socket.on('room:dissolved', ({ reason }) => {
+    returnToOnlineLobby(reason || 'Room closed — not enough players.');
+  });
   socket.on('matchmaking:waiting',   () => showWaitingRoom(null, 2, false));
   socket.on('matchmaking:cancelled', () => showLobby());
   socket.on('matchmaking:matched',   () => {});
@@ -1938,6 +1993,7 @@ function showWaitingRoom(code, maxPlayers, isHost) {
   showPage('page-waiting');
   G.isHost = isHost;
   document.getElementById('waiting-title').textContent = code ? 'WAITING FOR PLAYERS…' : 'FINDING OPPONENT…';
+  document.getElementById('fill-timeout-notice').classList.add('hidden');
 
   const codeBox = document.getElementById('waiting-code-box');
   if (code) {
@@ -1945,6 +2001,16 @@ function showWaitingRoom(code, maxPlayers, isHost) {
     codeBox.classList.remove('hidden');
   } else {
     codeBox.classList.add('hidden');
+  }
+
+  // Show countdown for multi-player rooms (3-5 players)
+  const cdWrap = document.getElementById('fill-countdown-wrap');
+  if (maxPlayers > 2 && code) {
+    cdWrap.classList.remove('hidden');
+    document.getElementById('fill-countdown-secs').textContent = '60';
+    document.getElementById('fill-countdown-secs').style.color = 'var(--gold)';
+  } else {
+    cdWrap.classList.add('hidden');
   }
 
   const startWrap = document.getElementById('start-btn-wrap');
