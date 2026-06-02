@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V25</title>
+<title>Superstar Cricket Cards — V26</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -413,7 +413,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V25</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V26</div>
   </div>
 </div>
 
@@ -1626,8 +1626,12 @@ function initSocket() {
   }
   socket = io('https://superstar-cricket-cards.onrender.com', {
     transports:['websocket','polling'],
-    reconnection:true, reconnectionAttempts:10,
-    reconnectionDelay:1000, timeout:20000,
+    reconnection:true,
+    reconnectionAttempts:15,      // retry up to 15x
+    reconnectionDelay:2000,       // start at 2s
+    reconnectionDelayMax:8000,    // cap at 8s
+    timeout:30000,                // 30s connect timeout (covers cold start)
+    randomizationFactor:0.3,
   });
 
   socket.on('connect', () => { G.mySocketId = socket.id; console.log('connected', socket.id); });
@@ -1849,7 +1853,14 @@ function initSocket() {
   // Handle server errors gracefully
   socket.on('connect_error', (err) => {
     console.error('Socket error:', err);
-    if (!G.inGame) setLobbyError('Connection failed. Check your internet and retry.');
+    if (!G.inGame) {
+      const attempts = socket.io?.reconnectionAttempts ? socket.io._reconnectionAttempts : 0;
+      if (attempts < 3) {
+        setLobbyError('Connecting to server… (may take up to 30s on first load)');
+      } else {
+        setLobbyError('Connection failed. Server may be starting up — please wait and retry.');
+      }
+    }
   });
 
   socket.on('room:error', ({ message }) => {
