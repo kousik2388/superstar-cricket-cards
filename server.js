@@ -18,6 +18,14 @@ const io     = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── UPTIME / HEALTH ENDPOINTS ──────────────────────────────────────
+// UptimeRobot pings /ping every 5 minutes to keep Render free tier awake
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), rooms: Object.keys(rooms).length, players: Object.keys(onlinePlayers).length });
+});
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
