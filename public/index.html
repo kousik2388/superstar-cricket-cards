@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V22</title>
+<title>Superstar Cricket Cards — V23</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -363,6 +363,31 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 @keyframes card-reveal{from{opacity:0;transform:rotateY(90deg) scale(.9)}to{opacity:1;transform:rotateY(0) scale(1)}}
 .card-revealed{animation:card-reveal .4s cubic-bezier(.175,.885,.32,1.275) forwards}
 @keyframes pop-in{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes shimmer{0%,100%{box-shadow:0 0 8px rgba(240,192,64,.4)}50%{box-shadow:0 0 22px rgba(240,192,64,.9)}}
+.rarity-legendary .cricket-card{animation:shimmer 2.2s ease-in-out infinite}
+@keyframes shimmer-epic{0%,100%{box-shadow:0 0 6px rgba(192,112,240,.3)}50%{box-shadow:0 0 18px rgba(192,112,240,.8)}}
+.rarity-epic .cricket-card{animation:shimmer-epic 2.2s ease-in-out infinite}
+.pack-mini{width:72px;height:96px;border-radius:7px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:4px;text-align:center;
+  border:2px solid;transition:transform .2s;box-sizing:border-box;}
+.pack-mini:hover{transform:scale(1.06)}
+.pack-mini .pmn{font-family:'Bebas Neue',cursive;font-size:10px;color:var(--white);letter-spacing:.5px;line-height:1.2;word-break:break-word;}
+.pack-mini .pmr{font-size:8px;letter-spacing:1px;margin-top:2px;font-family:'Bebas Neue',cursive;}
+.pack-mini-common{background:rgba(138,180,200,.08);border-color:var(--rc)} .pack-mini-common .pmr{color:var(--rc)}
+.pack-mini-rare{background:rgba(126,200,227,.1);border-color:var(--rr)} .pack-mini-rare .pmr{color:var(--rr)}
+.pack-mini-epic{background:rgba(192,112,240,.12);border-color:var(--re)} .pack-mini-epic .pmr{color:var(--re)}
+.pack-mini-legendary{background:rgba(240,192,64,.12);border-color:var(--rl)} .pack-mini-legendary .pmr{color:var(--rl)}
+@keyframes pack-pop{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.pack-pop{animation:pack-pop .35s cubic-bezier(.175,.885,.32,1.275) forwards}
+.coll-card{width:80px;height:110px;border-radius:7px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;padding:5px;text-align:center;border:2px solid;box-sizing:border-box;}
+.coll-card .cn{font-family:'Bebas Neue',cursive;font-size:10px;color:var(--white);letter-spacing:.5px;line-height:1.2;word-break:break-word;}
+.coll-card .cc{font-size:8px;color:var(--gray);letter-spacing:.5px;}
+.coll-card .cr{font-size:8px;letter-spacing:1px;font-family:'Bebas Neue',cursive;margin-top:2px;}
+.history-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.06);}
+.history-row .hr-res{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;min-width:52px;text-align:center;}
+.history-row.win .hr-res{color:var(--green-win)} .history-row.loss .hr-res{color:var(--red)} .history-row.draw .hr-res{color:var(--gray)}
 </style>
 </head>
 <body>
@@ -387,7 +412,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1);"></div>
     </div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.3);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V22</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V23</div>
   </div>
 </div>
 
@@ -404,7 +429,13 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <button class="btn-green" onclick="showFormatSelect()">▶ PLAY VS AI</button>
       <div class="menu-label" style="margin-top:4px;">🌐 MULTIPLAYER</div>
       <button class="btn-primary" onclick="showFormatSelectOnline()">▶ PLAY ONLINE</button>
-      <button class="btn-secondary" onclick="showRules()">📋 RULES</button>    </div>
+      <button class="btn-secondary" style="background:rgba(0,160,200,.15);border-color:var(--blue);color:var(--blue);" onclick="showPage('page-spectate');initSocket();">👁 SPECTATE</button>
+      <div style="display:flex;gap:8px;width:100%;max-width:300px;">
+        <button class="btn-secondary" style="flex:1;" onclick="showCollection()">🎴 COLLECTION</button>
+        <button class="btn-secondary" style="flex:1;" onclick="showLeaderboard()">🏆 HISTORY</button>
+      </div>
+      <button class="btn-secondary" onclick="showRules()">📋 RULES</button>
+    </div>
   </div>
 </div>
 
@@ -430,6 +461,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <button class="btn-primary" onclick="selectFormat('TEST')" style="background:linear-gradient(135deg,#40c870,#206040);">🏟️ TEST</button>
       <button class="btn-primary" onclick="selectFormat('IPL')" style="background:linear-gradient(135deg,#c050ff,#7020c0);">💎 IPL</button>
     </div>
+    <!-- AI Difficulty (AI mode only) -->
+    <div id="ai-difficulty-row" class="hidden" style="width:100%;max-width:300px;">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;text-align:center;">🤖 AI DIFFICULTY</div>
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <div class="count-btn active" id="diff-easy"   onclick="setAIDifficulty('easy')"  style="font-size:11px;padding:6px 12px;">EASY</div>
+        <div class="count-btn"        id="diff-medium" onclick="setAIDifficulty('medium')" style="font-size:11px;padding:6px 12px;">MEDIUM</div>
+        <div class="count-btn"        id="diff-hard"   onclick="setAIDifficulty('hard')"   style="font-size:11px;padding:6px 12px;">HARD</div>
+      </div>
+    </div>
     <button class="btn-danger" style="max-width:200px;" onclick="G.onlineMode?showPage('page-landing'):showLanding()">← BACK</button>
   </div>
 </div>
@@ -441,6 +481,19 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div id="role-format-badge" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:3px;color:var(--gold);background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.3);border-radius:4px;padding:3px 12px;display:inline-block;margin-bottom:12px;">ODI</div>
       <div class="page-header" style="border:none;padding:0;">SELECT YOUR SQUAD</div>
       <div style="font-size:12px;color:var(--gray);margin-top:6px;letter-spacing:.5px;line-height:1.5;">Your 10 cards will be picked from your chosen squad.<br>All-rounders appear in both.</div>
+    </div>
+    <!-- Country Filter -->
+    <div style="width:100%;max-width:300px;">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;">🌍 FILTER BY COUNTRY (OPTIONAL)</div>
+      <div style="position:relative;">
+        <select id="country-filter-select" onchange="G.selectedCountry=this.value"
+          style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+          border-radius:6px;padding:10px 12px;color:var(--white);font-family:'Rajdhani',sans-serif;
+          font-size:13px;letter-spacing:1px;cursor:pointer;appearance:none;-webkit-appearance:none;">
+          <option value="">All Countries</option>
+        </select>
+        <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gold);">▼</div>
+      </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
       <button class="btn-primary" onclick="selectRole('batter')" style="display:flex;align-items:center;justify-content:center;gap:10px;">
@@ -507,6 +560,104 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <span>⬇️</span><div><strong style="color:var(--gold)">Economy Rate:</strong> lower is better. <strong style="color:var(--gold)">Best Bowling:</strong> more wickets wins.</div></li>
   </ul>
   <button class="btn-secondary" style="max-width:260px;width:100%;" onclick="showLanding()">← BACK</button>
+</div>
+
+<!-- COLLECTION / PACK OPENING -->
+<div id="page-collection" class="page hidden" style="padding:0;overflow-y:auto;">
+  <div style="padding:20px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
+    <div class="page-header" style="border:none;padding:0;font-size:22px;">🎴 COLLECTION</div>
+    <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="showLanding()">← BACK</button>
+  </div>
+  <!-- Pack opening -->
+  <div style="padding:8px 16px 16px;">
+    <div style="background:rgba(240,192,64,.07);border:1px solid rgba(240,192,64,.2);border-radius:10px;padding:16px;text-align:center;margin-bottom:16px;">
+      <div style="font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:3px;color:var(--gold);margin-bottom:4px;">🎁 OPEN A PACK</div>
+      <div style="font-size:12px;color:var(--gray);margin-bottom:12px;">Win matches to earn packs. Each pack gives 5 cards.</div>
+      <div style="display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:12px;">
+        <div id="packs-available" style="font-family:'Bebas Neue',cursive;font-size:32px;color:var(--gold);">0</div>
+        <div style="font-size:12px;color:var(--gray);letter-spacing:1px;">PACKS<br>AVAILABLE</div>
+      </div>
+      <button id="open-pack-btn" class="btn-primary" style="max-width:200px;" onclick="openPack()">OPEN PACK</button>
+    </div>
+    <!-- Pack reveal overlay (hidden by default) -->
+    <div id="pack-reveal" class="hidden" style="background:rgba(0,0,0,.6);border:1px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+      <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;color:var(--gold);margin-bottom:12px;">✨ NEW CARDS!</div>
+      <div id="pack-cards-row" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+      <button class="btn-secondary" style="margin-top:12px;max-width:180px;" onclick="closePackReveal()">KEEP</button>
+    </div>
+    <!-- Stats -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <div style="flex:1;background:rgba(255,255,255,.04);border-radius:8px;padding:12px;text-align:center;">
+        <div id="coll-total" style="font-family:'Bebas Neue',cursive;font-size:24px;color:var(--gold);">0</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">CARDS</div>
+      </div>
+      <div style="flex:1;background:rgba(192,112,240,.1);border-radius:8px;padding:12px;text-align:center;">
+        <div id="coll-epic" style="font-family:'Bebas Neue',cursive;font-size:24px;color:#c070f0;">0</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">EPIC</div>
+      </div>
+      <div style="flex:1;background:rgba(240,192,64,.1);border-radius:8px;padding:12px;text-align:center;">
+        <div id="coll-legendary" style="font-family:'Bebas Neue',cursive;font-size:24px;color:var(--gold);">0</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">LEGENDARY</div>
+      </div>
+    </div>
+    <!-- Card grid -->
+    <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:8px;">YOUR CARDS</div>
+    <div id="collection-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding-bottom:24px;"></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD / HISTORY -->
+<div id="page-leaderboard" class="page hidden" style="padding:0;overflow-y:auto;">
+  <div style="padding:20px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
+    <div class="page-header" style="border:none;padding:0;font-size:22px;">🏆 HISTORY</div>
+    <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="showLanding()">← BACK</button>
+  </div>
+  <div style="padding:8px 16px;">
+    <!-- Win/Loss summary -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <div style="flex:1;background:rgba(50,200,80,.1);border:1px solid rgba(50,200,80,.3);border-radius:8px;padding:14px;text-align:center;">
+        <div id="lb-wins" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--green-win);">0</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">WINS</div>
+      </div>
+      <div style="flex:1;background:rgba(232,64,64,.1);border:1px solid rgba(232,64,64,.3);border-radius:8px;padding:14px;text-align:center;">
+        <div id="lb-losses" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--red);">0</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">LOSSES</div>
+      </div>
+      <div style="flex:1;background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.2);border-radius:8px;padding:14px;text-align:center;">
+        <div id="lb-winrate" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--gold);">-</div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--gray);">WIN %</div>
+      </div>
+    </div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:8px;">RECENT MATCHES</div>
+    <div id="match-history-list" style="display:flex;flex-direction:column;gap:8px;padding-bottom:24px;"></div>
+  </div>
+</div>
+
+<!-- SPECTATE PAGE -->
+<div id="page-spectate" class="page hidden" style="padding:20px 16px;max-width:480px;margin:0 auto;">
+  <div class="page-header" style="border:none;padding:0;margin-bottom:16px;">👁 SPECTATE</div>
+  <div style="font-size:13px;color:var(--gray);margin-bottom:16px;">Watch a live match by entering the room code.</div>
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
+    <input id="spectate-name-input" placeholder="Your name" maxlength="20"
+      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;
+      padding:12px 16px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;
+      letter-spacing:1px;width:100%;box-sizing:border-box;">
+    <input id="spectate-code-input" placeholder="Room code (4 letters)" maxlength="4"
+      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;
+      padding:12px 16px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:18px;
+      letter-spacing:6px;text-transform:uppercase;width:100%;box-sizing:border-box;text-align:center;">
+    <button class="btn-primary" onclick="joinAsSpectator()">👁 WATCH LIVE</button>
+    <div id="spectate-error" style="font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
+    <button class="btn-secondary" onclick="showLanding()">← BACK</button>
+  </div>
+  <!-- Spectate live view -->
+  <div id="spectate-live" class="hidden" style="margin-top:20px;">
+    <div style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:3px;color:var(--gray);text-align:center;margin-bottom:12px;">👁 WATCHING LIVE</div>
+    <div id="spectate-scoreboard" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:12px;"></div>
+    <div id="spectate-status" style="font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:2px;color:var(--gold);text-align:center;padding:10px;background:rgba(240,192,64,.08);border-radius:6px;margin-bottom:10px;">WAITING…</div>
+    <div style="font-size:11px;color:var(--gray);text-align:center;">Round <span id="spectate-round">-</span> / 10</div>
+    <button class="btn-danger" style="max-width:200px;margin:20px auto 0;display:block;" onclick="leaveSpectate()">LEAVE</button>
+  </div>
 </div>
 
 <!-- LOBBY -->
@@ -697,6 +848,10 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     </div>
   </div>
   <div class="status-banner" id="status-banner">Loading…</div>
+  <div style="position:absolute;top:10px;right:10px;z-index:10;">
+    <button id="mute-btn" onclick="toggleMute()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+      border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;color:var(--gray);" title="Toggle sound">🔊</button>
+  </div>
   <div id="pick-countdown-wrap" class="hidden" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0 2px;">
     <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">PICK IN</div>
     <div id="pick-countdown" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--gold);min-width:32px;text-align:center;line-height:1;">15</div>
@@ -853,7 +1008,16 @@ function computeDeckAverages(deck) {
 }
 
 function aiPickBestStat(aiCard, phase) {
+  const diff    = G.aiDifficulty || 'medium';
   const allowed = STAT_CONFIG.map(s => s.key);
+
+  // EASY: always random
+  if (diff === 'easy') return allowed[Math.floor(Math.random() * allowed.length)];
+
+  // MEDIUM: best pick 60% of the time, random 40%
+  if (diff === 'medium' && Math.random() < 0.4) return allowed[Math.floor(Math.random() * allowed.length)];
+
+  // HARD (and medium best-pick path): highest normalised score
   let bestKey = null, bestScore = -Infinity;
   STAT_CONFIG.filter(sc => allowed.includes(sc.key) || (sc.special && phase==='bowling')).forEach(sc => {
     let score = 0;
@@ -863,7 +1027,7 @@ function aiPickBestStat(aiCard, phase) {
     const norm = score / (DECK_AVERAGES[sc.key]||1);
     if (norm > bestScore) { bestScore=norm; bestKey=sc.key; }
   });
-  return bestKey;
+  return bestKey || allowed[0];
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -910,9 +1074,11 @@ const G = {
   pickSecondsLeft: 15,
   playAgainTimer: null,     // client-side play-again wait countdown
   playAgainSecondsLeft: 30,
-  _dcCountdownTimer: null,  // disconnect overlay countdown
-  _confirmTimer: null,       // non-picker confirm countdown
+  _dcCountdownTimer: null,
+  _confirmTimer: null,
   _confirmSecsLeft: 10,
+  selectedCountry: '',       // country filter
+  aiDifficulty: 'medium',    // easy | medium | hard
 };
 
 // ── FORCE RETURN TO MENU ─────────────────────────────────────────
@@ -934,6 +1100,69 @@ function forceReturnToMenu() {
   showLanding();
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// SOUND ENGINE (Web Audio API — no external files needed)
+// ═══════════════════════════════════════════════════════════════════
+const SFX = (() => {
+  let ctx = null;
+  let muted = false;
+  function getCtx() {
+    if (!ctx) {
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    return ctx;
+  }
+  function play(type) {
+    if (muted) return;
+    const c = getCtx(); if (!c) return;
+    try {
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.connect(gain); gain.connect(c.destination);
+      const t = c.currentTime;
+      if (type === 'pick') {
+        osc.type='sine'; osc.frequency.setValueAtTime(440,t); osc.frequency.exponentialRampToValueAtTime(880,t+.12);
+        gain.gain.setValueAtTime(.18,t); gain.gain.exponentialRampToValueAtTime(.001,t+.18);
+        osc.start(t); osc.stop(t+.18);
+      } else if (type === 'win') {
+        osc.type='triangle';
+        [523,659,784,1047].forEach((f,i)=>{ osc.frequency.setValueAtTime(f,t+i*.1); });
+        gain.gain.setValueAtTime(.2,t); gain.gain.exponentialRampToValueAtTime(.001,t+.55);
+        osc.start(t); osc.stop(t+.55);
+      } else if (type === 'lose') {
+        osc.type='sawtooth'; osc.frequency.setValueAtTime(220,t); osc.frequency.exponentialRampToValueAtTime(110,t+.3);
+        gain.gain.setValueAtTime(.15,t); gain.gain.exponentialRampToValueAtTime(.001,t+.3);
+        osc.start(t); osc.stop(t+.3);
+      } else if (type === 'confirm') {
+        osc.type='sine'; osc.frequency.setValueAtTime(660,t); gain.gain.setValueAtTime(.12,t);
+        gain.gain.exponentialRampToValueAtTime(.001,t+.1); osc.start(t); osc.stop(t+.1);
+      } else if (type === 'toss') {
+        osc.type='triangle'; osc.frequency.setValueAtTime(330,t); osc.frequency.setValueAtTime(660,t+.15);
+        gain.gain.setValueAtTime(.15,t); gain.gain.exponentialRampToValueAtTime(.001,t+.3);
+        osc.start(t); osc.stop(t+.3);
+      } else if (type === 'card') {
+        osc.type='sine'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(600,t+.08);
+        gain.gain.setValueAtTime(.1,t); gain.gain.exponentialRampToValueAtTime(.001,t+.12);
+        osc.start(t); osc.stop(t+.12);
+      } else if (type === 'pack') {
+        [523,659,784,880,1047].forEach((f,i)=>{
+          const o2=c.createOscillator(), g2=c.createGain();
+          o2.connect(g2); g2.connect(c.destination);
+          o2.type='triangle'; o2.frequency.setValueAtTime(f,t+i*.07);
+          g2.gain.setValueAtTime(.15,t+i*.07); g2.gain.exponentialRampToValueAtTime(.001,t+i*.07+.2);
+          o2.start(t+i*.07); o2.stop(t+i*.07+.2);
+        });
+      } else if (type === 'timer') {
+        osc.type='square'; osc.frequency.setValueAtTime(880,t);
+        gain.gain.setValueAtTime(.06,t); gain.gain.exponentialRampToValueAtTime(.001,t+.07);
+        osc.start(t); osc.stop(t+.07);
+      }
+    } catch(e) {}
+  }
+  function toggleMute() { muted = !muted; return muted; }
+  return { play, toggleMute, isMuted: () => muted };
+})();
+
 // ── PICK TIMER ───────────────────────────────────────────────────
 function startPickTimer(seconds, onExpire) {
   clearPickTimer();
@@ -947,6 +1176,7 @@ function startPickTimer(seconds, onExpire) {
     if (el) {
       el.textContent = Math.max(0, G.pickSecondsLeft);
       el.style.color = G.pickSecondsLeft <= 5 ? 'var(--red)' : 'var(--gold)';
+      if (G.pickSecondsLeft <= 5 && G.pickSecondsLeft > 0) SFX.play('timer');
     }
     if (G.pickSecondsLeft <= 0) {
       clearPickTimer();
@@ -954,6 +1184,12 @@ function startPickTimer(seconds, onExpire) {
     }
   }, 1000);
 }
+function toggleMute() {
+  const muted = SFX.toggleMute();
+  const btn = document.getElementById('mute-btn');
+  if (btn) btn.textContent = muted ? '🔇' : '🔊';
+}
+
 function clearPickTimer() {
   if (G.pickTimer) { clearInterval(G.pickTimer); G.pickTimer = null; }
   const wrap = document.getElementById('pick-countdown-wrap');
@@ -1437,7 +1673,10 @@ function initSocket() {
     showWaitingRoom(code, maxPlayers, true);
   });
 
-  socket.on('room:playerJoined', ({ players, maxPlayers, canStart }) => {
+  socket.on('room:playerJoined', ({ players, maxPlayers, canStart, format, role }) => {
+    // Sync format/role from room if server sent it (for code-join format mismatch fix)
+    if (format) G.selectedFormat = format;
+    if (role !== undefined) G.selectedRole = role || null;
     G.players = players.map(p => ({ ...p, score: 0 }));
     updateLobbyPlayerList(players, maxPlayers);
     if (G.isHost) {
@@ -1556,8 +1795,14 @@ function initSocket() {
     showLobby();
   });
 
-  socket.on('game:opponentWantsRematch', () => {
-    document.getElementById('rematch-notice').classList.remove('hidden');
+  socket.on('game:opponentWantsRematch', ({ name, readyCount, totalCount } = {}) => {
+    const notice = document.getElementById('rematch-notice');
+    if (notice) {
+      notice.classList.remove('hidden');
+      notice.textContent = totalCount > 2
+        ? `⏳ ${name || 'Player'} wants a rematch! (${readyCount}/${totalCount} ready)`
+        : '⏳ Opponent wants a rematch!';
+    }
   });
 
   // Server auto-resolved confirm because non-picker didn't tap in time
@@ -1596,6 +1841,13 @@ function initSocket() {
   });
 
   // Rematch timed out — opponent didn't respond in 30 seconds
+  // ── SPECTATE UPDATES ──
+  socket.on('spectate:roundUpdate', updateSpectateView);
+  socket.on('spectate:joined', ({ name }) => {
+    // Show notification that spectator joined (optional)
+    console.log(`[spectate] ${name} is watching`);
+  });
+
   socket.on('game:rematchTimeout', () => {
     clearPlayAgainTimer();
     document.getElementById('rematch-timeout-notice')?.classList.remove('hidden');
@@ -1659,6 +1911,14 @@ function showDisconnectOverlay(msg) {
 function setLobbyError(msg) { document.getElementById('lobby-error').textContent=msg; }
 
 // ── LOBBY PLAYER COUNT SELECTOR
+function setAIDifficulty(d) {
+  G.aiDifficulty = d;
+  ['easy','medium','hard'].forEach(x => {
+    const el = document.getElementById(`diff-${x}`);
+    if (el) el.classList.toggle('active', x === d);
+  });
+}
+
 function setPlayerCount(n) {
   G.selectedPlayerCount = n;
   [2,3,4].forEach(i => {
@@ -1975,6 +2235,7 @@ function mismatchCancel() {
 function showFormatSelect() {
   G.onlineMode = false;
   document.getElementById('format-player-count-row')?.classList.add('hidden');
+  document.getElementById('ai-difficulty-row')?.classList.remove('hidden');
   showPage('page-format');
 }
 
@@ -1982,15 +2243,24 @@ function showFormatSelect() {
 function showFormatSelectOnline() {
   G.onlineMode = true;
   document.getElementById('format-player-count-row')?.classList.remove('hidden');
+  document.getElementById('ai-difficulty-row')?.classList.add('hidden');
   showPage('page-format');
 }
 
 function selectFormat(fmt) {
   G.selectedFormat = fmt;
+  G.selectedCountry = '';
   document.getElementById('role-format-badge').textContent = fmt;
-  // Update role page back button destination
+  // Populate country filter dropdown
+  const sel = document.getElementById('country-filter-select');
+  if (sel) {
+    const deck = getDeckForFormat(fmt);
+    const countries = getCountries(deck);
+    sel.innerHTML = '<option value="">All Countries</option>' +
+      countries.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.value = '';
+  }
   showPage('page-role');
-  // Update role page back button
   const roleBackBtn = document.querySelector('#page-role .btn-danger');
   if (roleBackBtn) roleBackBtn.onclick = G.onlineMode ? showFormatSelectOnline : showFormatSelect;
 }
@@ -2072,11 +2342,15 @@ function startAIGame() {
   G.chosenStat  = null;
   G.inGame      = true;
 
-  // Deal from role-filtered squad (or full deck if no role selected)
+  // Deal from role+country filtered squad
   const fullDeck = getDeckForFormat(G.selectedFormat || 'ODI');
-  computeDeckAverages(fullDeck);  // recompute for this deck
-  const squad = G.selectedRole ? getSquadByRoleFromDeck(fullDeck, G.selectedRole) : fullDeck;
-  // Need at least 20 cards; fallback to full deck if squad too small
+  computeDeckAverages(fullDeck);
+  let squad = G.selectedRole ? getSquadByRoleFromDeck(fullDeck, G.selectedRole) : fullDeck;
+  if (G.selectedCountry) {
+    const filtered = filterByCountry(squad, G.selectedCountry);
+    if (filtered.length >= 20) squad = filtered;
+    // else silently fall back to unfiltered squad
+  }
   const pool  = squad.length >= 20 ? squad : fullDeck;
   const deck  = shuffle(pool);
 
@@ -2114,6 +2388,7 @@ function showCoinToss() {
   setTimeout(() => {
     coin.classList.remove('coin-spinning');
     coin.classList.add('coin-landed');
+    SFX.play('toss');
 
     // Random result
     const playerGoesFirst = Math.random() < 0.5;
@@ -2258,6 +2533,7 @@ function aiRenderRound() {
       const aiId   = 'ai_player';
       const aiCard = G.aiHands[aiId][G.round];
       const best   = aiPickBestStat(aiCard, 'all');
+      SFX.play('pick');
       aiStatChosen(best);
     }, 1200);
   }
@@ -2277,6 +2553,7 @@ function pickStat(statKey) {
   if (G.mode === 'online') {
     if (G.phase !== 'pick' || G.myIndex !== G.pickerIndex) return;
     clearPickTimer();
+    SFX.play('pick');
     socket.emit('round:pick', { statKey });
     return;
   }
@@ -2296,6 +2573,7 @@ function confirmStat() {
     if (G.phase !== 'confirm' || G.myIndex === G.pickerIndex || G.confirmedOnline) return;
     G.confirmedOnline = true;
     clearConfirmTimer();
+    SFX.play('confirm');
     socket.emit('round:confirm');
     return;
   }
@@ -2580,6 +2858,18 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
 
   document.getElementById('result-overlay').classList.remove('hidden');
   document.getElementById('result-overlay').scrollTop = 0;
+  // Animate cards in sequence
+  const wraps = cardsArea.querySelectorAll('.result-card-wrap');
+  wraps.forEach((w, i) => {
+    w.style.opacity = '0';
+    w.style.transform = 'translateY(16px)';
+    setTimeout(() => {
+      w.style.transition = 'opacity .3s ease, transform .3s ease';
+      w.style.opacity = '1';
+      w.style.transform = 'translateY(0)';
+      SFX.play('card');
+    }, i * 160);
+  });
 }
 
 function handleNextRound() {
@@ -2621,9 +2911,9 @@ function showFinalResult(finalRanking, myIndex) {
 
   const trophy = document.getElementById('final-trophy');
   const text   = document.getElementById('final-result-text');
-  if (iWon && !isDraw) { trophy.textContent='🏆'; text.textContent='YOU WON!';        text.className='final-result-text win'; }
+  if (iWon && !isDraw) { trophy.textContent='🏆'; text.textContent='YOU WON!';        text.className='final-result-text win'; SFX.play('win'); }
   else if (isDraw)     { trophy.textContent='🤝'; text.textContent='MATCH DRAWN!';    text.className='final-result-text draw'; }
-  else                 { trophy.textContent='😞'; text.textContent='BETTER LUCK NEXT!'; text.className='final-result-text lose'; }
+  else                 { trophy.textContent='😞'; text.textContent='BETTER LUCK NEXT!'; text.className='final-result-text lose'; SFX.play('lose'); }
 
   // Leaderboard
   const lb = document.getElementById('final-leaderboard');
@@ -4346,6 +4636,231 @@ const T20I_CARDS = [
   { id:"sikandar_raza_t20i2", name:"Sikandar Raza", country:"Zimbabwe", role:"All-rounder", rarity:"Rare", avatarUrl:null, matches:85, runs:1956, fours:166, sixes:57, fifties:13, hundreds:0, highestScore:82, strikeRate:128.58, bestBowlingWickets:5, bestBowlingRuns:11, economyRate:7.11, wickets:69, catches:29, stumpings:0 },
 ]; // end T20I_CARDS
 
+
+// ═══════════════════════════════════════════════════════════════════
+// COLLECTION & LEADERBOARD (localStorage)
+// ═══════════════════════════════════════════════════════════════════
+const LS_COLLECTION = 'scc_collection';
+const LS_PACKS      = 'scc_packs';
+const LS_HISTORY    = 'scc_history';
+
+function lsGet(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e) { return def; }
+}
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+
+// Collection: { cardId: { card, addedAt } }
+function getCollection() { return lsGet(LS_COLLECTION, {}); }
+function getPackCount()  { return lsGet(LS_PACKS, 0); }
+function setPackCount(n) { lsSet(LS_PACKS, n); }
+function addPackCount(n) { setPackCount(getPackCount() + n); }
+function getHistory()    { return lsGet(LS_HISTORY, []); }
+
+function saveMatchResult(result) {
+  // result: { outcome:'win'|'loss'|'draw', format, role, opponent, myScore, oppScore, date }
+  const history = getHistory();
+  history.unshift({ ...result, date: Date.now() });
+  if (history.length > 50) history.pop(); // keep last 50
+  lsSet(LS_HISTORY, history);
+  // Award a pack for wins
+  if (result.outcome === 'win') addPackCount(1);
+}
+
+function showCollection() {
+  const coll = getCollection();
+  const cards = Object.values(coll).map(c => c.card);
+  const total = cards.length;
+  const epic = cards.filter(c => c.rarity === 'Epic').length;
+  const legendary = cards.filter(c => c.rarity === 'Legendary').length;
+  const packs = getPackCount();
+
+  document.getElementById('packs-available').textContent = packs;
+  document.getElementById('open-pack-btn').disabled = packs <= 0;
+  document.getElementById('coll-total').textContent = total;
+  document.getElementById('coll-epic').textContent = epic;
+  document.getElementById('coll-legendary').textContent = legendary;
+  document.getElementById('pack-reveal').classList.add('hidden');
+
+  const grid = document.getElementById('collection-grid');
+  if (cards.length === 0) {
+    grid.innerHTML = `<div style="color:var(--gray);font-size:13px;text-align:center;padding:24px;width:100%;">No cards yet. Win matches to earn packs!</div>`;
+  } else {
+    const rarityOrder = { Legendary:0, Epic:1, Rare:2, Common:3 };
+    cards.sort((a,b) => (rarityOrder[a.rarity]||3) - (rarityOrder[b.rarity]||3));
+    const rarityBorder = { Common:'var(--rc)', Rare:'var(--rr)', Epic:'var(--re)', Legendary:'var(--rl)' };
+    grid.innerHTML = cards.map(c => `
+      <div class="coll-card" style="border-color:${rarityBorder[c.rarity]||'var(--rc)'};">
+        <div style="font-size:16px;">${c.country === 'India' ? '🇮🇳' : c.country === 'Australia' ? '🦘' : '🏏'}</div>
+        <div class="cn">${c.name.split(' ').slice(-1)[0]}</div>
+        <div class="cc">${c.country}</div>
+        <div class="cr" style="color:${rarityBorder[c.rarity]||'var(--rc)'};">${c.rarity.toUpperCase()}</div>
+      </div>`).join('');
+  }
+  showPage('page-collection');
+}
+
+function openPack() {
+  const packs = getPackCount();
+  if (packs <= 0) return;
+  setPackCount(packs - 1);
+  document.getElementById('packs-available').textContent = packs - 1;
+  document.getElementById('open-pack-btn').disabled = packs - 1 <= 0;
+
+  // Pick 5 random cards weighted by rarity
+  const allCards = [...ODI_CARDS, ...IPL_CARDS, ...TEST_CARDS, ...T20I_CARDS];
+  const weights = { Common:60, Rare:25, Epic:12, Legendary:3 };
+  const pool = allCards.flatMap(c => Array(weights[c.rarity]||60).fill(c));
+  const picked = [];
+  for (let i=0; i<5; i++) {
+    picked.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+
+  // Save to collection
+  const coll = getCollection();
+  picked.forEach(c => { if (!coll[c.id]) coll[c.id] = { card: c, addedAt: Date.now() }; });
+  lsSet(LS_COLLECTION, coll);
+
+  // Show pack reveal
+  const rarityBorder = { Common:'var(--rc)', Rare:'var(--rr)', Epic:'var(--re)', Legendary:'var(--rl)' };
+  const row = document.getElementById('pack-cards-row');
+  row.innerHTML = '';
+  picked.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = `pack-mini pack-mini-${c.rarity.toLowerCase()}`;
+    div.style.animationDelay = `${i * 0.08}s`;
+    div.innerHTML = `<div style="font-size:14px;">🏏</div><div class="pmn">${c.name.split(' ').slice(-1)[0]}</div><div class="pmr">${c.rarity.toUpperCase()}</div>`;
+    div.style.opacity = '0';
+    row.appendChild(div);
+    setTimeout(() => {
+      div.style.opacity = '1';
+      div.classList.add('pack-pop');
+      SFX.play('pack');
+    }, i * 120);
+  });
+  document.getElementById('pack-reveal').classList.remove('hidden');
+  document.getElementById('coll-total').textContent = Object.keys(getCollection()).length;
+}
+
+function closePackReveal() {
+  document.getElementById('pack-reveal').classList.add('hidden');
+  showCollection();
+}
+
+function showLeaderboard() {
+  const history = getHistory();
+  const wins   = history.filter(h => h.outcome === 'win').length;
+  const losses = history.filter(h => h.outcome === 'loss').length;
+  const total  = wins + losses;
+  const wr     = total > 0 ? Math.round(wins/total*100) + '%' : '-';
+
+  document.getElementById('lb-wins').textContent = wins;
+  document.getElementById('lb-losses').textContent = losses;
+  document.getElementById('lb-winrate').textContent = wr;
+
+  const list = document.getElementById('match-history-list');
+  if (history.length === 0) {
+    list.innerHTML = `<div style="color:var(--gray);font-size:13px;text-align:center;padding:24px;">No matches played yet.</div>`;
+  } else {
+    list.innerHTML = history.slice(0, 30).map(h => {
+      const d = new Date(h.date);
+      const ds = `${d.getDate()}/${d.getMonth()+1} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const resLabel = h.outcome === 'win' ? 'WIN' : h.outcome === 'loss' ? 'LOSS' : 'DRAW';
+      return `<div class="history-row ${h.outcome}">
+        <div class="hr-res">${resLabel}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;">${h.opponent || 'AI'}</div>
+          <div style="font-size:10px;color:var(--gray);letter-spacing:.5px;">${h.format||'ODI'} • ${ds}</div>
+        </div>
+        <div style="font-family:'Bebas Neue',cursive;font-size:16px;color:var(--gold);">${h.myScore ?? '-'}<span style="font-size:11px;color:var(--gray);">/${h.oppScore ?? '-'}</span></div>
+      </div>`;
+    }).join('');
+  }
+  showPage('page-leaderboard');
+}
+
+// Hook into showFinalResult to save match history
+const _origShowFinalResult = showFinalResult;
+function showFinalResult(finalRanking, myIndex) {
+  _origShowFinalResult(finalRanking, myIndex);
+  // Save to history (only save once per match)
+  if (G.inGame === false) {
+    let ranking = finalRanking;
+    if (!ranking) {
+      ranking = [...G.players].sort((a,b)=>b.score-a.score).map(p=>({name:p.name,socketId:p.socketId,score:p.score}));
+    }
+    const mySocketId = G.mode==='ai' ? 'player' : (typeof socket !== 'undefined' ? socket?.id : null);
+    const myEntry = ranking.find(r => r.socketId === mySocketId);
+    const myRank = ranking.indexOf(myEntry);
+    const outcome = myRank === 0 ? (ranking.filter(r=>r.score===ranking[0].score).length>1 ? 'draw' : 'win') : 'loss';
+    const oppEntry = ranking.find(r => r.socketId !== mySocketId);
+    saveMatchResult({
+      outcome,
+      format: G.selectedFormat || 'ODI',
+      role: G.selectedRole || null,
+      opponent: G.mode === 'ai' ? 'AI (' + (G.aiDifficulty||'medium') + ')' : (oppEntry?.name || 'Opponent'),
+      myScore: myEntry?.score ?? 0,
+      oppScore: oppEntry?.score ?? 0,
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SPECTATE
+// ═══════════════════════════════════════════════════════════════════
+function joinAsSpectator() {
+  const name = document.getElementById('spectate-name-input').value.trim() || 'Spectator';
+  const code = document.getElementById('spectate-code-input').value.trim().toUpperCase();
+  const errEl = document.getElementById('spectate-error');
+  if (code.length !== 4) { errEl.textContent = 'Enter a 4-letter room code.'; return; }
+  errEl.textContent = '';
+  if (!socket) initSocket();
+  socket.emit('spectate:join', { spectatorName: name, code });
+  socket.once('spectate:state', (state) => {
+    document.getElementById('spectate-live').classList.remove('hidden');
+    updateSpectateView(state);
+  });
+  socket.once('room:error', ({ message }) => {
+    errEl.textContent = message;
+  });
+}
+
+function updateSpectateView(state) {
+  // Scoreboard
+  const sb = document.getElementById('spectate-scoreboard');
+  if (sb) {
+    sb.innerHTML = state.players.map(p =>
+      `<div style="background:rgba(255,255,255,.06);border-radius:6px;padding:8px 14px;text-align:center;">
+        <div style="font-family:'Bebas Neue',cursive;font-size:18px;color:var(--gold);">${p.score}</div>
+        <div style="font-size:10px;color:var(--gray);">${p.name}</div>
+      </div>`
+    ).join('');
+  }
+  const status = document.getElementById('spectate-status');
+  const picker = state.players[state.pickerIndex];
+  if (status) {
+    if (state.roundPhase === 'pick') status.textContent = `${picker?.name || '?'} IS PICKING A STAT…`;
+    else if (state.roundPhase === 'confirm') status.textContent = `STAT: ${statLabel(state.roundStat)} — WAITING FOR CONFIRM`;
+    else status.textContent = 'ROUND RESULT…';
+  }
+  const roundEl = document.getElementById('spectate-round');
+  if (roundEl) roundEl.textContent = (state.round + 1);
+}
+
+function leaveSpectate() {
+  if (socket) socket.emit('spectate:leave');
+  document.getElementById('spectate-live').classList.add('hidden');
+  showLanding();
+}
+
+// ── Wire spectate updates ──
+function wireSpectateListeners() {
+  if (!socket) return;
+  socket.on('spectate:roundUpdate', updateSpectateView);
+  socket.on('game:over', () => {
+    const s = document.getElementById('spectate-status');
+    if (s) s.textContent = 'MATCH OVER';
+  });
+}
 
 // Boot — show loading screen, landing appears after tap
 computeDeckAverages();
