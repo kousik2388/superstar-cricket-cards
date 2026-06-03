@@ -234,11 +234,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .rarity-badge.rarity-rare{background:rgba(126,200,227,.2);color:var(--rr);border:1px solid var(--rr)}
 .rarity-badge.rarity-epic{background:rgba(192,112,240,.2);color:var(--re);border:1px solid var(--re)}
 .rarity-badge.rarity-legendary{background:rgba(240,192,64,.2);color:var(--rl);border:1px solid var(--rl)}
-.card-avatar{height:56px;background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
+.card-avatar{height:140px;background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
   display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .card-avatar::before{content:'';position:absolute;inset:0;
   background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,.015) 6px,rgba(255,255,255,.015) 12px)}
-.player-silhouette{font-size:34px;opacity:.7}
+.player-silhouette{font-size:52px;opacity:.5}
 .player-initials{position:absolute;bottom:3px;right:8px;font-family:'Bebas Neue',cursive;font-size:14px;color:rgba(255,255,255,.35);letter-spacing:2px}
 .country-strip{height:3px;width:100%}
 .card-stats{background:rgba(10,20,14,.97);padding:4px 6px}
@@ -1242,6 +1242,23 @@ function toggleMute() {
   const muted = SFX.toggleMute();
   const btn = document.getElementById('mute-btn');
   if (btn) btn.textContent = muted ? '🔇' : '🔊';
+}
+
+// Clean fallback when an avatar image fails to load
+function avatarFallback(img) {
+  const initials = img.dataset.initials || '?';
+  img.style.display = 'none';
+  const parent = img.parentNode;
+  if (!parent.querySelector('.player-silhouette')) {
+    const sil = document.createElement('div');
+    sil.className = 'player-silhouette';
+    sil.textContent = '🏏';
+    const ini = document.createElement('div');
+    ini.className = 'player-initials';
+    ini.textContent = initials;
+    parent.appendChild(sil);
+    parent.appendChild(ini);
+  }
 }
 
 function clearPickTimer() {
@@ -3022,7 +3039,7 @@ function buildCard(card, { clickable=false, selected=null, blink=null, result=nu
     </div>
     <div class="card-avatar">
       ${card.avatarUrl
-        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy" onerror="this.style.display='none';this.parentNode.innerHTML+='<div class=\\"player-silhouette\\">🏏</div><div class=\\"player-initials\\">${initials}</div>'">`
+        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy" onerror="avatarFallback(this)">`
         : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`
       }
     </div>
@@ -3034,6 +3051,38 @@ function buildCard(card, { clickable=false, selected=null, blink=null, result=nu
 // ═══════════════════════════════════════════════════════════════════
 // RESULT OVERLAY — shows all cards with ranks
 // ═══════════════════════════════════════════════════════════════════
+
+// Compact card for result overlay: photo + name + single highlighted stat
+function buildResultCard(card, { rankClass='', statKey=null, isMe=false } = {}) {
+  if (!card) return '<div class="result-card-empty">No card</div>';
+  const initials = card.name.split(' ').map(w=>w[0]).join('').substring(0,3);
+  const rc       = 'rarity-' + card.rarity.toLowerCase();
+  const sc       = STAT_CONFIG.find(s => s.key === statKey);
+  const val      = sc ? displayVal(card, statKey) : '—';
+  const avatarHtml = card.avatarUrl
+    ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}"
+         style="width:100%;height:100%;object-fit:cover;object-position:top center;"
+         loading="lazy" onerror="avatarFallback(this)">`
+    : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`;
+
+  return `<div class="cricket-card ${rc}" style="width:100%;">
+    <div class="card-header">
+      <div>
+        <div class="card-player-name">${card.name}</div>
+        <div class="card-country-role">${card.team ? card.team + ' · ' : card.country + ' · '}${card.role}</div>
+      </div>
+      <div class="rarity-badge ${rc}">${card.rarity.toUpperCase()}</div>
+    </div>
+    <div class="card-avatar">${avatarHtml}</div>
+    <div class="country-strip ${countryClass(card.country)}"></div>
+    ${sc ? `<div class="card-stats" style="padding:10px 12px;">
+      <button class="stat-btn ${rankClass}" style="pointer-events:none;width:100%;">
+        <span class="stat-label">${sc.label}</span>
+        <span class="stat-value hl">${val}</span>
+      </button>
+    </div>` : ''}
+  </div>`;
+}
 function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName, nextPickerIndex, ranked, allCards, mode }) {
   const label      = document.getElementById('result-label');
   const statLine   = document.getElementById('result-stat-line');
@@ -3131,8 +3180,7 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
       const wrap = document.createElement('div');
       wrap.className = 'result-card-wrap';
       wrap.innerHTML = `<div class="result-card-label ${w.labelCls}">${w.label}</div>
-        ${buildCard(w.card, { clickable:false, selected:statKey, result:'show', rankClass:w.rc, isMyCard:false })}`;
-      if (!w.isMe) wrap.firstElementChild.nextElementSibling?.classList.add('card-revealed');
+        ${buildResultCard(w.card, { statKey, rankClass: w.rc, isMe: w.isMe })}`;
       cardsArea.appendChild(wrap);
     });
   } else {
@@ -3142,10 +3190,8 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
     allWraps.forEach(w => {
       const wrap = document.createElement('div');
       wrap.className = 'result-card-wrap';
-      // For multi-card use compact card — just show top stats
       wrap.innerHTML = `<div class="result-card-label ${w.labelCls}" style="font-size:9px">${w.label}</div>
-        ${buildCard(w.card, { clickable:false, selected:statKey, result:'show', rankClass:w.rc, isMyCard:false })}`;
-      if (!w.isMe) wrap.querySelector('.cricket-card')?.classList.add('card-revealed');
+        ${buildResultCard(w.card, { statKey, rankClass: w.rc, isMe: w.isMe })}`;
       grid.appendChild(wrap);
     });
     cardsArea.appendChild(grid);
@@ -3329,13 +3375,13 @@ function clearPlayAgainTimer() {
 // Recommended image: 160x90px or similar landscape crop, player from waist up.
 // ═══════════════════════════════════════════════════════════════════
 const ODI_CARDS = [
-  { id:"sachin_tendulkar_odi", name:"Sachin Tendulkar", country:"India", role:"Batter", rarity:"Legendary", matches:463, runs:18426, fours:2016, sixes:195, fifties:96, hundreds:49, highestScore:200, strikeRate:86.23, bestBowlingWickets:5, bestBowlingRuns:32, economyRate:5.10, wickets:154, catches:140, stumpings:0 },
-  { id:"ms_dhoni_odi", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary", matches:350, runs:10773, fours:826, sixes:229, fifties:73, hundreds:10, highestScore:183, strikeRate:87.56, bestBowlingWickets:1, bestBowlingRuns:14, economyRate:5.93, wickets:1, catches:321, stumpings:123 },
-  { id:"virat_kohli_odi", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", matches:302, runs:14557, fours:1310, sixes:155, fifties:74, hundreds:54, highestScore:183, strikeRate:93.62, bestBowlingWickets:4, bestBowlingRuns:13, economyRate:6.39, wickets:4, catches:150, stumpings:0 },
-  { id:"rohit_sharma_odi", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", matches:282, runs:11577, fours:1090, sixes:357, fifties:57, hundreds:32, highestScore:264, strikeRate:89.80, bestBowlingWickets:2, bestBowlingRuns:9, economyRate:5.42, wickets:8, catches:115, stumpings:0 },
-  { id:"sourav_ganguly_odi", name:"Sourav Ganguly", country:"India", role:"All-rounder", rarity:"Epic", matches:311, runs:11363, fours:1122, sixes:190, fifties:72, hundreds:22, highestScore:183, strikeRate:73.70, bestBowlingWickets:5, bestBowlingRuns:16, economyRate:4.37, wickets:100, catches:100, stumpings:0 },
-  { id:"yuvraj_singh_odi", name:"Yuvraj Singh", country:"India", role:"All-rounder", rarity:"Epic", matches:304, runs:8701, fours:779, sixes:284, fifties:52, hundreds:14, highestScore:150, strikeRate:87.66, bestBowlingWickets:5, bestBowlingRuns:31, economyRate:5.02, wickets:111, catches:89, stumpings:0 },
-  { id:"jasprit_bumrah_odi", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary", matches:89, runs:65, fours:3, sixes:2, fifties:0, hundreds:0, highestScore:10, strikeRate:62.00, bestBowlingWickets:6, bestBowlingRuns:19, economyRate:4.60, wickets:149, catches:18, stumpings:0 },
+  { id:"sachin_tendulkar_odi", name:"Sachin Tendulkar", country:"India", role:"Batter", rarity:"Legendary", matches:463, runs:18426, fours:2016, sixes:195, fifties:96, hundreds:49, highestScore:200, strikeRate:86.23, bestBowlingWickets:5, bestBowlingRuns:32, economyRate:5.10, wickets:154, catches:140, stumpings:0, avatarUrl:"/img/sachin_tendulkar.webp" },
+  { id:"ms_dhoni_odi", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary", matches:350, runs:10773, fours:826, sixes:229, fifties:73, hundreds:10, highestScore:183, strikeRate:87.56, bestBowlingWickets:1, bestBowlingRuns:14, economyRate:5.93, wickets:1, catches:321, stumpings:123, avatarUrl:"/img/ms_dhoni.webp" },
+  { id:"virat_kohli_odi", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", matches:302, runs:14557, fours:1310, sixes:155, fifties:74, hundreds:54, highestScore:183, strikeRate:93.62, bestBowlingWickets:4, bestBowlingRuns:13, economyRate:6.39, wickets:4, catches:150, stumpings:0, avatarUrl:"/img/virat_kohli.webp" },
+  { id:"rohit_sharma_odi", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", matches:282, runs:11577, fours:1090, sixes:357, fifties:57, hundreds:32, highestScore:264, strikeRate:89.80, bestBowlingWickets:2, bestBowlingRuns:9, economyRate:5.42, wickets:8, catches:115, stumpings:0, avatarUrl:"/img/rohit_sharma.webp" },
+  { id:"sourav_ganguly_odi", name:"Sourav Ganguly", country:"India", role:"All-rounder", rarity:"Epic", matches:311, runs:11363, fours:1122, sixes:190, fifties:72, hundreds:22, highestScore:183, strikeRate:73.70, bestBowlingWickets:5, bestBowlingRuns:16, economyRate:4.37, wickets:100, catches:100, stumpings:0, avatarUrl:"/img/sourav_ganguly.webp" },
+  { id:"yuvraj_singh_odi", name:"Yuvraj Singh", country:"India", role:"All-rounder", rarity:"Epic", matches:304, runs:8701, fours:779, sixes:284, fifties:52, hundreds:14, highestScore:150, strikeRate:87.66, bestBowlingWickets:5, bestBowlingRuns:31, economyRate:5.02, wickets:111, catches:89, stumpings:0, avatarUrl:"/img/yuvraj_singh.webp" },
+  { id:"jasprit_bumrah_odi", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary", matches:89, runs:65, fours:3, sixes:2, fifties:0, hundreds:0, highestScore:10, strikeRate:62.00, bestBowlingWickets:6, bestBowlingRuns:19, economyRate:4.60, wickets:149, catches:18, stumpings:0, avatarUrl:"/img/jasprit_bumrah.webp" },
   { id:"ricky_ponting_odi", name:"Ricky Ponting", country:"Australia", role:"Batter", rarity:"Legendary", matches:375, runs:13704, fours:1231, sixes:163, fifties:82, hundreds:30, highestScore:164, strikeRate:80.39, bestBowlingWickets:3, bestBowlingRuns:0, economyRate:4.73, wickets:3, catches:160, stumpings:0 },
   { id:"adam_gilchrist_odi", name:"Adam Gilchrist", country:"Australia", role:"Wicket-keeper", rarity:"Legendary", matches:287, runs:9619, fours:1000, sixes:149, fifties:55, hundreds:16, highestScore:172, strikeRate:96.94, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:417, stumpings:55 },
   { id:"brett_lee_odi", name:"Brett Lee", country:"Australia", role:"Bowler", rarity:"Epic", matches:221, runs:950, fours:59, sixes:32, fifties:2, hundreds:0, highestScore:52, strikeRate:83.04, bestBowlingWickets:5, bestBowlingRuns:22, economyRate:4.76, wickets:380, catches:49, stumpings:0 },
@@ -3374,13 +3420,13 @@ const ODI_CARDS = [
   // Sources: myKhel, Wisden, ESPNcricinfo, cricket365 — May 2026
 
   // India
-  { id:"rahul_dravid_odi", name:"Rahul Dravid", country:"India", role:"Batter", rarity:"Legendary", matches:344, runs:10889, fours:1146, sixes:42, fifties:83, hundreds:12, highestScore:153, strikeRate:71.19, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:196, stumpings:14 },
-  { id:"kapil_dev_odi", name:"Kapil Dev", country:"India", role:"All-rounder", rarity:"Legendary", matches:225, runs:3783, fours:340, sixes:70, fifties:14, hundreds:1, highestScore:175, strikeRate:95.07, bestBowlingWickets:5, bestBowlingRuns:43, economyRate:5.56, wickets:253, catches:71, stumpings:0 },
-  { id:"virender_sehwag_odi", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Epic", matches:251, runs:8273, fours:1000, sixes:186, fifties:38, hundreds:15, highestScore:219, strikeRate:104.33, bestBowlingWickets:3, bestBowlingRuns:17, economyRate:6.12, wickets:96, catches:96, stumpings:0 },
-  { id:"sunil_gavaskar_odi", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Epic", matches:108, runs:3092, fours:273, sixes:1, fifties:27, hundreds:1, highestScore:103, strikeRate:62.33, bestBowlingWickets:1, bestBowlingRuns:9, economyRate:4.62, wickets:1, catches:22, stumpings:0 },
-  { id:"zaheer_khan_odi", name:"Zaheer Khan", country:"India", role:"Bowler", rarity:"Epic", matches:200, runs:793, fours:58, sixes:17, fifties:0, hundreds:0, highestScore:39, strikeRate:71.28, bestBowlingWickets:5, bestBowlingRuns:42, economyRate:4.96, wickets:282, catches:38, stumpings:0 },
-  { id:"harbhajan_singh_odi", name:"Harbhajan Singh", country:"India", role:"Bowler", rarity:"Epic", matches:236, runs:1237, fours:84, sixes:16, fifties:1, hundreds:0, highestScore:47, strikeRate:79.37, bestBowlingWickets:5, bestBowlingRuns:31, economyRate:4.61, wickets:269, catches:61, stumpings:0 },
-  { id:"shubman_gill_odi", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", matches:62, runs:3127, fours:294, sixes:90, fifties:16, hundreds:9, highestScore:208, strikeRate:104.64, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:22, stumpings:0 },
+  { id:"rahul_dravid_odi", name:"Rahul Dravid", country:"India", role:"Batter", rarity:"Legendary", matches:344, runs:10889, fours:1146, sixes:42, fifties:83, hundreds:12, highestScore:153, strikeRate:71.19, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:196, stumpings:14, avatarUrl:"/img/rahul_dravid.webp" },
+  { id:"kapil_dev_odi", name:"Kapil Dev", country:"India", role:"All-rounder", rarity:"Legendary", matches:225, runs:3783, fours:340, sixes:70, fifties:14, hundreds:1, highestScore:175, strikeRate:95.07, bestBowlingWickets:5, bestBowlingRuns:43, economyRate:5.56, wickets:253, catches:71, stumpings:0, avatarUrl:"/img/kapil_dev.webp" },
+  { id:"virender_sehwag_odi", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Epic", matches:251, runs:8273, fours:1000, sixes:186, fifties:38, hundreds:15, highestScore:219, strikeRate:104.33, bestBowlingWickets:3, bestBowlingRuns:17, economyRate:6.12, wickets:96, catches:96, stumpings:0, avatarUrl:"/img/virender_sehwag.webp" },
+  { id:"sunil_gavaskar_odi", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Epic", matches:108, runs:3092, fours:273, sixes:1, fifties:27, hundreds:1, highestScore:103, strikeRate:62.33, bestBowlingWickets:1, bestBowlingRuns:9, economyRate:4.62, wickets:1, catches:22, stumpings:0, avatarUrl:"/img/sunil_gavaskar.webp" },
+  { id:"zaheer_khan_odi", name:"Zaheer Khan", country:"India", role:"Bowler", rarity:"Epic", matches:200, runs:793, fours:58, sixes:17, fifties:0, hundreds:0, highestScore:39, strikeRate:71.28, bestBowlingWickets:5, bestBowlingRuns:42, economyRate:4.96, wickets:282, catches:38, stumpings:0, avatarUrl:"/img/zaheer_khan.webp" },
+  { id:"harbhajan_singh_odi", name:"Harbhajan Singh", country:"India", role:"Bowler", rarity:"Epic", matches:236, runs:1237, fours:84, sixes:16, fifties:1, hundreds:0, highestScore:47, strikeRate:79.37, bestBowlingWickets:5, bestBowlingRuns:31, economyRate:4.61, wickets:269, catches:61, stumpings:0, avatarUrl:"/img/harbhajan_singh.webp" },
+  { id:"shubman_gill_odi", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", matches:62, runs:3127, fours:294, sixes:90, fifties:16, hundreds:9, highestScore:208, strikeRate:104.64, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:22, stumpings:0, avatarUrl:"/img/shubman_gill.webp" },
 
   // Australia
   { id:"michael_clarke_odi", name:"Michael Clarke", country:"Australia", role:"Batter", rarity:"Epic", matches:245, runs:7981, fours:769, sixes:70, fifties:58, hundreds:8, highestScore:130, strikeRate:73.50, bestBowlingWickets:6, bestBowlingRuns:9, economyRate:4.87, wickets:58, catches:105, stumpings:0 },
@@ -3469,14 +3515,14 @@ const IPL_CARDS = [
 
   // ── TOP RUN SCORERS ───────────────────────────────────────────────
   { id:"virat_kohli_ipl", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary",
-    team:"RCB", avatarUrl:null, avatarAlt:null,
+    team:"RCB", avatarUrl:"/img/virat_kohli.webp", avatarAlt:null,
     matches:281, runs:9012, fours:785, sixes:297,
     fifties:67, hundreds:8, highestScore:113,
     strikeRate:134.39,
     bestBowlingWickets:1, bestBowlingRuns:13, economyRate:8.10, wickets:4, catches:141, stumpings:0 },
 
   { id:"rohit_sharma_ipl", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary",
-    team:"MI", avatarUrl:null, avatarAlt:null,
+    team:"MI", avatarUrl:"/img/rohit_sharma.webp", avatarAlt:null,
     matches:276, runs:7183, fours:651, sixes:309,
     fifties:49, hundreds:2, highestScore:109,
     strikeRate:133.01,
@@ -3504,7 +3550,7 @@ const IPL_CARDS = [
     bestBowlingWickets:3, bestBowlingRuns:12, economyRate:8.32, wickets:36, catches:109, stumpings:0 },
 
   { id:"ms_dhoni_ipl", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary",
-    team:"CSK", avatarUrl:null, avatarAlt:null,
+    team:"CSK", avatarUrl:"/img/ms_dhoni.webp", avatarAlt:null,
     matches:278, runs:5439, fours:383, sixes:264,
     fifties:27, hundreds:0, highestScore:84,
     strikeRate:136.08,
@@ -3518,7 +3564,7 @@ const IPL_CARDS = [
     bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:147, stumpings:0 },
 
   { id:"kl_rahul_ipl", name:"KL Rahul", country:"India", role:"Wicket-keeper", rarity:"Epic",
-    team:"RCB/PBKS/LSG", avatarUrl:null, avatarAlt:null,
+    team:"RCB/PBKS/LSG", avatarUrl:"/img/kl_rahul.webp", avatarAlt:null,
     matches:132, runs:4683, fours:428, sixes:154,
     fifties:42, hundreds:4, highestScore:132,
     strikeRate:136.47,
@@ -3581,7 +3627,7 @@ const IPL_CARDS = [
     bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:166, stumpings:28 },
 
   { id:"virender_sehwag_ipl", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Epic",
-    team:"DC/KXIP", avatarUrl:null, avatarAlt:null,
+    team:"DC/KXIP", avatarUrl:"/img/virender_sehwag.webp", avatarAlt:null,
     matches:104, runs:2728, fours:336, sixes:94,
     fifties:13, hundreds:1, highestScore:122,
     strikeRate:153.78,
@@ -3595,7 +3641,7 @@ const IPL_CARDS = [
     bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:68, stumpings:22 },
 
   { id:"shubman_gill_ipl", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic",
-    team:"KKR/GT", avatarUrl:null, avatarAlt:null,
+    team:"KKR/GT", avatarUrl:"/img/shubman_gill.webp", avatarAlt:null,
     matches:101, runs:3080, fours:286, sixes:79,
     fifties:23, hundreds:3, highestScore:129,
     strikeRate:135.46,
@@ -3637,7 +3683,7 @@ const IPL_CARDS = [
     bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:29, stumpings:0 },
 
   { id:"suryakumar_yadav_ipl", name:"Suryakumar Yadav", country:"India", role:"Batter", rarity:"Epic",
-    team:"KKR/MI", avatarUrl:null, avatarAlt:null,
+    team:"KKR/MI", avatarUrl:"/img/suryakumar_yadav.webp", avatarAlt:null,
     matches:177, runs:4166, fours:355, sixes:201,
     fifties:26, hundreds:2, highestScore:103,
     strikeRate:144.13,
@@ -3652,7 +3698,7 @@ const IPL_CARDS = [
 
   // ── ALL-ROUNDERS ──────────────────────────────────────────────────
   { id:"hardik_pandya_ipl", name:"Hardik Pandya", country:"India", role:"All-rounder", rarity:"Legendary",
-    team:"MI/GT", avatarUrl:null, avatarAlt:null,
+    team:"MI/GT", avatarUrl:"/img/hardik_pandya.webp", avatarAlt:null,
     matches:148, runs:2800, fours:214, sixes:159,
     fifties:14, hundreds:0, highestScore:91,
     strikeRate:147.24,
@@ -3680,7 +3726,7 @@ const IPL_CARDS = [
     bestBowlingWickets:4, bestBowlingRuns:22, economyRate:9.21, wickets:69, catches:75, stumpings:0 },
 
   { id:"ravindra_jadeja_ipl", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Epic",
-    team:"RR/CSK", avatarUrl:null, avatarAlt:null,
+    team:"RR/CSK", avatarUrl:"/img/ravindra_jadeja.webp", avatarAlt:null,
     matches:254, runs:2777, fours:198, sixes:99,
     fifties:3, hundreds:0, highestScore:62,
     strikeRate:127.84,
@@ -3751,7 +3797,7 @@ const IPL_CARDS = [
     bestBowlingWickets:5, bestBowlingRuns:40, economyRate:7.84, wickets:221, catches:44, stumpings:0 },
 
   { id:"jasprit_bumrah_ipl", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary",
-    team:"MI", avatarUrl:null, avatarAlt:null,
+    team:"MI", avatarUrl:"/img/jasprit_bumrah.webp", avatarAlt:null,
     matches:145, runs:55, fours:2, sixes:1,
     fifties:0, hundreds:0, highestScore:7,
     strikeRate:55.00,
@@ -3793,14 +3839,14 @@ const IPL_CARDS = [
     bestBowlingWickets:4, bestBowlingRuns:7, economyRate:6.33, wickets:158, catches:41, stumpings:0 },
 
   { id:"harbhajan_singh_ipl", name:"Harbhajan Singh", country:"India", role:"Bowler", rarity:"Epic",
-    team:"MI/CSK/KKR", avatarUrl:null, avatarAlt:null,
+    team:"MI/CSK/KKR", avatarUrl:"/img/harbhajan_singh.webp", avatarAlt:null,
     matches:163, runs:542, fours:34, sixes:11,
     fifties:1, hundreds:0, highestScore:61,
     strikeRate:118.34,
     bestBowlingWickets:5, bestBowlingRuns:18, economyRate:7.05, wickets:150, catches:41, stumpings:0 },
 
   { id:"ravichandran_ashwin_ipl", name:"R Ashwin", country:"India", role:"Bowler", rarity:"Epic",
-    team:"CSK/PBKS/DC/RR", avatarUrl:null, avatarAlt:null,
+    team:"CSK/PBKS/DC/RR", avatarUrl:"/img/r_ashwin.webp", avatarAlt:null,
     matches:221, runs:642, fours:41, sixes:11,
     fifties:0, hundreds:0, highestScore:46,
     strikeRate:109.02,
@@ -3906,7 +3952,7 @@ const IPL_CARDS = [
 
   // ── MORE BATTERS ──────────────────────────────────────────────────
   { id:"yuvraj_singh_ipl", name:"Yuvraj Singh", country:"India", role:"Batter", rarity:"Epic",
-    team:"PBKS/RCB/MI/SRH", avatarUrl:null, avatarAlt:null,
+    team:"PBKS/RCB/MI/SRH", avatarUrl:"/img/yuvraj_singh.webp", avatarAlt:null,
     matches:132, runs:2750, fours:246, sixes:141,
     fifties:18, hundreds:1, highestScore:83,
     strikeRate:133.58,
@@ -4096,7 +4142,7 @@ const IPL_CARDS = [
     bestBowlingWickets:5, bestBowlingRuns:32, economyRate:8.64, wickets:108, catches:14, stumpings:0 },
 
   { id:"zaheer_khan_ipl", name:"Zaheer Khan", country:"India", role:"Bowler", rarity:"Epic",
-    team:"MI/DC/RCB", avatarUrl:null, avatarAlt:null,
+    team:"MI/DC/RCB", avatarUrl:"/img/zaheer_khan.webp", avatarAlt:null,
     matches:100, runs:120, fours:6, sixes:2,
     fifties:0, hundreds:0, highestScore:13,
     strikeRate:76.43,
@@ -4243,47 +4289,47 @@ const IPL_CARDS = [
 const TEST_CARDS = [
 
   // ── INDIA ───────────────────────────────────────────────────────
-  { id:"sachin_tendulkar_test", name:"Sachin Tendulkar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"sachin_tendulkar_test", name:"Sachin Tendulkar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/sachin_tendulkar.webp",
     matches:200, runs:15921, fours:2058, sixes:69, fifties:68, hundreds:51, highestScore:248,
     strikeRate:54.09, bestBowlingWickets:3, bestBowlingRuns:10, economyRate:2.57, wickets:46, catches:115, stumpings:0 },
 
-  { id:"rahul_dravid_test", name:"Rahul Dravid", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"rahul_dravid_test", name:"Rahul Dravid", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/rahul_dravid.webp",
     matches:164, runs:13288, fours:1654, sixes:6, fifties:63, hundreds:36, highestScore:270,
     strikeRate:42.52, bestBowlingWickets:1, bestBowlingRuns:18, economyRate:3.07, wickets:1, catches:210, stumpings:0 },
 
-  { id:"virat_kohli_test", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"virat_kohli_test", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/virat_kohli.webp",
     matches:123, runs:9230, fours:1091, sixes:27, fifties:31, hundreds:30, highestScore:254,
     strikeRate:57.02, bestBowlingWickets:1, bestBowlingRuns:20, economyRate:4.01, wickets:1, catches:107, stumpings:0 },
 
-  { id:"sunil_gavaskar_test", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"sunil_gavaskar_test", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/sunil_gavaskar.webp",
     matches:125, runs:10122, fours:1177, sixes:0, fifties:45, hundreds:34, highestScore:236,
     strikeRate:51.12, bestBowlingWickets:1, bestBowlingRuns:34, economyRate:1.74, wickets:1, catches:108, stumpings:0 },
 
-  { id:"anil_kumble_test", name:"Anil Kumble", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:null,
+  { id:"anil_kumble_test", name:"Anil Kumble", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:"/img/anil_kumble.webp",
     matches:132, runs:2506, fours:218, sixes:6, fifties:5, hundreds:0, highestScore:110,
     strikeRate:41.11, bestBowlingWickets:10, bestBowlingRuns:74, economyRate:2.69, wickets:619, catches:62, stumpings:0 },
 
-  { id:"ravichandran_ashwin_test", name:"R Ashwin", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:null,
+  { id:"ravichandran_ashwin_test", name:"R Ashwin", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:"/img/r_ashwin.webp",
     matches:106, runs:3503, fours:391, sixes:14, fifties:14, hundreds:6, highestScore:124,
     strikeRate:52.24, bestBowlingWickets:9, bestBowlingRuns:72, economyRate:2.78, wickets:537, catches:84, stumpings:0 },
 
-  { id:"ms_dhoni_test", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:null,
+  { id:"ms_dhoni_test", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:"/img/ms_dhoni.webp",
     matches:90, runs:4876, fours:436, sixes:78, fifties:33, hundreds:6, highestScore:224,
     strikeRate:59.45, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:256, stumpings:38 },
 
-  { id:"virender_sehwag_test", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"virender_sehwag_test", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/virender_sehwag.webp",
     matches:104, runs:8586, fours:1195, sixes:91, fifties:32, hundreds:23, highestScore:319,
     strikeRate:82.23, bestBowlingWickets:4, bestBowlingRuns:35, economyRate:4.01, wickets:40, catches:91, stumpings:0 },
 
-  { id:"kapil_dev_test", name:"Kapil Dev", country:"India", role:"All-rounder", rarity:"Legendary", avatarUrl:null,
+  { id:"kapil_dev_test", name:"Kapil Dev", country:"India", role:"All-rounder", rarity:"Legendary", avatarUrl:"/img/kapil_dev.webp",
     matches:131, runs:5248, fours:546, sixes:114, fifties:27, hundreds:8, highestScore:163,
     strikeRate:59.52, bestBowlingWickets:9, bestBowlingRuns:83, economyRate:2.92, wickets:434, catches:64, stumpings:0 },
 
-  { id:"ravindra_jadeja_test", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:null,
+  { id:"ravindra_jadeja_test", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:"/img/ravindra_jadeja.webp",
     matches:77, runs:3201, fours:360, sixes:20, fifties:19, hundreds:4, highestScore:175,
     strikeRate:55.56, bestBowlingWickets:7, bestBowlingRuns:42, economyRate:2.52, wickets:298, catches:81, stumpings:0 },
 
-  { id:"shubman_gill_test", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", avatarUrl:null,
+  { id:"shubman_gill_test", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", avatarUrl:"/img/shubman_gill.webp",
     matches:34, runs:2560, fours:308, sixes:22, fifties:11, hundreds:6, highestScore:210,
     strikeRate:57.84, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:18, stumpings:0 },
 
@@ -4463,7 +4509,7 @@ const TEST_CARDS = [
   { id:"bishan_bedi_test", name:"Bishan Bedi", country:"India", role:"Bowler", rarity:"Epic", avatarUrl:null,
     matches:67, runs:656, fours:52, sixes:2, fifties:0, hundreds:0, highestScore:50,
     strikeRate:31.74, bestBowlingWickets:7, bestBowlingRuns:98, economyRate:2.35, wickets:266, catches:26, stumpings:0 },
-  { id:"rohit_sharma_test", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"rohit_sharma_test", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/rohit_sharma.webp",
     matches:67, runs:4301, fours:453, sixes:84, fifties:20, hundreds:12, highestScore:212,
     strikeRate:60.56, bestBowlingWickets:1, bestBowlingRuns:6, economyRate:3.84, wickets:5, catches:58, stumpings:0 },
 
@@ -4589,13 +4635,13 @@ const TEST_CARDS = [
     matches:65, runs:1990, fours:200, sixes:28, fifties:7, hundreds:1, highestScore:127,
     strikeRate:44.68, bestBowlingWickets:6, bestBowlingRuns:73, economyRate:2.87, wickets:216, catches:27, stumpings:0 },
 
-  { id:"sunil_gavaskar_t", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null, matches:125, runs:10122, fours:1177, sixes:0, fifties:45, hundreds:34, highestScore:236, strikeRate:51.12, bestBowlingWickets:1, bestBowlingRuns:34, economyRate:1.74, wickets:1, catches:108, stumpings:0 },
-  { id:"virender_sehwag_t", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null, matches:104, runs:8586, fours:1195, sixes:91, fifties:32, hundreds:23, highestScore:319, strikeRate:82.23, bestBowlingWickets:4, bestBowlingRuns:35, economyRate:4.01, wickets:40, catches:91, stumpings:0 },
+  { id:"sunil_gavaskar_t", name:"Sunil Gavaskar", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/sunil_gavaskar.webp", matches:125, runs:10122, fours:1177, sixes:0, fifties:45, hundreds:34, highestScore:236, strikeRate:51.12, bestBowlingWickets:1, bestBowlingRuns:34, economyRate:1.74, wickets:1, catches:108, stumpings:0 },
+  { id:"virender_sehwag_t", name:"Virender Sehwag", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/virender_sehwag.webp", matches:104, runs:8586, fours:1195, sixes:91, fifties:32, hundreds:23, highestScore:319, strikeRate:82.23, bestBowlingWickets:4, bestBowlingRuns:35, economyRate:4.01, wickets:40, catches:91, stumpings:0 },
   { id:"garry_sobers_t", name:"Garfield Sobers", country:"West Indies", role:"All-rounder", rarity:"Legendary", avatarUrl:null, matches:93, runs:8032, fours:891, sixes:72, fifties:26, hundreds:26, highestScore:365, strikeRate:57.61, bestBowlingWickets:6, bestBowlingRuns:73, economyRate:2.69, wickets:235, catches:109, stumpings:0 },
   { id:"viv_richards_t", name:"Viv Richards", country:"West Indies", role:"Batter", rarity:"Legendary", avatarUrl:null, matches:121, runs:8540, fours:922, sixes:84, fifties:32, hundreds:24, highestScore:291, strikeRate:70.80, bestBowlingWickets:5, bestBowlingRuns:88, economyRate:3.84, wickets:32, catches:122, stumpings:0 },
   { id:"ab_devilliers_t", name:"AB de Villiers", country:"South Africa", role:"Batter", rarity:"Legendary", avatarUrl:null, matches:114, runs:8765, fours:834, sixes:89, fifties:46, hundreds:22, highestScore:278, strikeRate:60.60, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:220, stumpings:1 },
   { id:"shaun_pollock_t", name:"Shaun Pollock", country:"South Africa", role:"All-rounder", rarity:"Legendary", avatarUrl:null, matches:108, runs:3781, fours:372, sixes:17, fifties:16, hundreds:2, highestScore:111, strikeRate:52.06, bestBowlingWickets:7, bestBowlingRuns:87, economyRate:2.63, wickets:421, catches:72, stumpings:0 },
-  { id:"ms_dhoni_t", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:null, matches:90, runs:4876, fours:436, sixes:78, fifties:33, hundreds:6, highestScore:224, strikeRate:59.45, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:256, stumpings:38 },
+  { id:"ms_dhoni_t", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:"/img/ms_dhoni.webp", matches:90, runs:4876, fours:436, sixes:78, fifties:33, hundreds:6, highestScore:224, strikeRate:59.45, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:256, stumpings:38 },
   { id:"inzamam_test", name:"Inzamam-ul-Haq", country:"Pakistan", role:"Batter", rarity:"Epic", avatarUrl:null, matches:120, runs:8830, fours:859, sixes:36, fifties:46, hundreds:25, highestScore:329, strikeRate:52.96, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:100, stumpings:0 },
   { id:"graeme_smith_t", name:"Graeme Smith", country:"South Africa", role:"Batter", rarity:"Epic", avatarUrl:null, matches:117, runs:9265, fours:1116, sixes:32, fifties:38, hundreds:27, highestScore:277, strikeRate:47.85, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:104, stumpings:0 },
   { id:"curtly_ambrose_t", name:"Curtly Ambrose", country:"West Indies", role:"Bowler", rarity:"Legendary", avatarUrl:null, matches:98, runs:1439, fours:128, sixes:17, fifties:1, hundreds:0, highestScore:53, strikeRate:28.35, bestBowlingWickets:8, bestBowlingRuns:45, economyRate:2.52, wickets:405, catches:22, stumpings:0 },
@@ -4611,19 +4657,19 @@ const TEST_CARDS = [
 const T20I_CARDS = [
 
   // ── INDIA ────────────────────────────────────────────────────────
-  { id:"virat_kohli_t20i", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"virat_kohli_t20i", name:"Virat Kohli", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/virat_kohli.webp",
     matches:125, runs:4188, fours:336, sixes:93, fifties:38, hundreds:1, highestScore:122,
     strikeRate:137.04, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:41, stumpings:0 },
 
-  { id:"rohit_sharma_t20i", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"rohit_sharma_t20i", name:"Rohit Sharma", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/rohit_sharma.webp",
     matches:159, runs:4231, fours:370, sixes:205, fifties:26, hundreds:5, highestScore:118,
     strikeRate:140.89, bestBowlingWickets:1, bestBowlingRuns:10, economyRate:7.14, wickets:1, catches:50, stumpings:0 },
 
-  { id:"suryakumar_yadav_t20i", name:"Suryakumar Yadav", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:null,
+  { id:"suryakumar_yadav_t20i", name:"Suryakumar Yadav", country:"India", role:"Batter", rarity:"Legendary", avatarUrl:"/img/suryakumar_yadav.webp",
     matches:78, runs:3272, fours:278, sixes:175, fifties:22, hundreds:4, highestScore:117,
     strikeRate:170.05, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:30, stumpings:0 },
 
-  { id:"jasprit_bumrah_t20i", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:null,
+  { id:"jasprit_bumrah_t20i", name:"Jasprit Bumrah", country:"India", role:"Bowler", rarity:"Legendary", avatarUrl:"/img/jasprit_bumrah.webp",
     matches:72, runs:12, fours:0, sixes:0, fifties:0, hundreds:0, highestScore:7,
     strikeRate:37.50, bestBowlingWickets:4, bestBowlingRuns:14, economyRate:6.29, wickets:89, catches:18, stumpings:0 },
 
@@ -4631,23 +4677,23 @@ const T20I_CARDS = [
     matches:85, runs:48, fours:2, sixes:1, fifties:0, hundreds:0, highestScore:8,
     strikeRate:53.33, bestBowlingWickets:5, bestBowlingRuns:32, economyRate:7.78, wickets:125, catches:14, stumpings:0 },
 
-  { id:"hardik_pandya_t20i", name:"Hardik Pandya", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:null,
+  { id:"hardik_pandya_t20i", name:"Hardik Pandya", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:"/img/hardik_pandya.webp",
     matches:120, runs:1858, fours:148, sixes:99, fifties:8, hundreds:0, highestScore:87,
     strikeRate:148.92, bestBowlingWickets:4, bestBowlingRuns:14, economyRate:8.89, wickets:79, catches:30, stumpings:0 },
 
-  { id:"ms_dhoni_t20i", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary", avatarUrl:null,
+  { id:"ms_dhoni_t20i", name:"MS Dhoni", country:"India", role:"Wicket-keeper", rarity:"Legendary", avatarUrl:"/img/ms_dhoni.webp",
     matches:98, runs:1617, fours:116, sixes:52, fifties:2, hundreds:0, highestScore:56,
     strikeRate:126.13, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:57, stumpings:34 },
 
-  { id:"yuvraj_singh_t20i", name:"Yuvraj Singh", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:null,
+  { id:"yuvraj_singh_t20i", name:"Yuvraj Singh", country:"India", role:"All-rounder", rarity:"Epic", avatarUrl:"/img/yuvraj_singh.webp",
     matches:58, runs:1177, fours:82, sixes:80, fifties:8, hundreds:0, highestScore:77,
     strikeRate:147.33, bestBowlingWickets:3, bestBowlingRuns:17, economyRate:8.02, wickets:28, catches:18, stumpings:0 },
 
-  { id:"ravindra_jadeja_t20i", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Rare", avatarUrl:null,
+  { id:"ravindra_jadeja_t20i", name:"Ravindra Jadeja", country:"India", role:"All-rounder", rarity:"Rare", avatarUrl:"/img/ravindra_jadeja.webp",
     matches:74, runs:515, fours:37, sixes:14, fifties:0, hundreds:0, highestScore:46,
     strikeRate:130.55, bestBowlingWickets:3, bestBowlingRuns:15, economyRate:7.03, wickets:54, catches:24, stumpings:0 },
 
-  { id:"kl_rahul_t20i", name:"KL Rahul", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:null,
+  { id:"kl_rahul_t20i", name:"KL Rahul", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:"/img/kl_rahul.webp",
     matches:72, runs:2265, fours:193, sixes:77, fifties:20, hundreds:2, highestScore:110,
     strikeRate:141.88, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:46, stumpings:22 },
 
@@ -4847,7 +4893,7 @@ const T20I_CARDS = [
   { id:"rishabh_pant_t20i", name:"Rishabh Pant", country:"India", role:"Wicket-keeper", rarity:"Epic", avatarUrl:null,
     matches:66, runs:987, fours:76, sixes:52, fifties:3, hundreds:0, highestScore:65,
     strikeRate:126.57, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:52, stumpings:14 },
-  { id:"shubman_gill_t20i", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", avatarUrl:null,
+  { id:"shubman_gill_t20i", name:"Shubman Gill", country:"India", role:"Batter", rarity:"Epic", avatarUrl:"/img/shubman_gill.webp",
     matches:48, runs:1479, fours:132, sixes:52, fifties:9, hundreds:2, highestScore:126,
     strikeRate:148.94, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:16, stumpings:0 },
 
