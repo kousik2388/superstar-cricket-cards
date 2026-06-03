@@ -38,7 +38,7 @@ const BATTING_STATS  = ['matches','runs','fours','sixes','fifties','hundreds','h
 const BOWLING_STATS  = ['bestBowling','economyRate','wickets','catches','stumpings'];
 
 // Podium points: index = rank (0=1st, 1=2nd, 2=3rd, 3=4th)
-const PODIUM_POINTS = [3, 2, 1, 0];
+const PODIUM_POINTS = [4, 3, 2, 1, 0];
 
 // 1v1: winner gets 1 round win, loser gets 0
 // 3-4 players: podium points
@@ -171,7 +171,13 @@ function startGame(room) {
   const fullDeck = getDeckForFormat(room.format || 'ODI');
   const squad    = getSquadByRole(fullDeck, room.role);
   // Need at least 10 cards per player; fall back if squad too small
-  const pool     = squad.length >= room.maxPlayers * 10 ? squad : fullDeck;
+  let pool = squad.length >= room.maxPlayers * 10 ? squad : fullDeck;
+  // Safety: if even fullDeck is too small (shouldn't happen), pad by repeating
+  if (pool.length < room.maxPlayers * 10) {
+    const padded = [];
+    while (padded.length < room.maxPlayers * 10) padded.push(...pool);
+    pool = padded;
+  }
   const deck     = shuffle(pool);
   room.players.forEach((p, i) => {
     room.hands[p.socketId] = deck.slice(i * 10, (i+1) * 10);
