@@ -113,7 +113,6 @@ function createRoom(code, maxPlayers=2, format='ODI') {
   return {
     code, format, maxPlayers,
     players: [],     // [{ socketId, name, score }]
-    spectators: [],  // [{ socketId, name }]
     hands: {},
     round: 0,
     pickerIndex: 0,
@@ -131,6 +130,7 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     playAgainTimer: null,
     fillTimer: null,
     cleanupTimer: null,    // fix #3: handle for 30s post-game delete timer
+    nextTimer: null,       // auto-advance next round timer
   };
 }
 
@@ -245,24 +245,11 @@ function startGame(room) {
   // Do NOT call emitRound yet — wait for all players to finish arranging (hand:reorder)
 }
 
-function broadcastSpectateState(room) {
-  if (!room.spectators || room.spectators.length === 0) return;
-  const state = {
-    players: room.players.map(p => ({ name: p.name, socketId: p.socketId, score: p.score })),
-    round: room.round,
-    totalRounds: TOTAL_ROUNDS,
-    pickerIndex: room.pickerIndex,
-    pickerName: room.players[room.pickerIndex]?.name,
-    roundPhase: room.roundPhase,
-    roundStat: room.roundStat,
-  };
-  room.spectators.forEach(s => io.to(s.socketId).emit('spectate:roundUpdate', state));
-}
-
 function emitRound(room) {
   room.roundStat   = null;
   room.roundPhase  = 'pick';
   room.nextAcks    = new Set();  // fix #8: reset before each round so early acks don't skip rounds
+  if (room.nextTimer) { clearTimeout(room.nextTimer); room.nextTimer = null; }
   room.confirmAcks = new Set();
 
   // Clear any previous pick timer
@@ -287,7 +274,6 @@ function emitRound(room) {
     });
   });
 
-  broadcastSpectateState(room);
 
   // Server-side 15s pick timeout — auto-pick a random stat if picker doesn't respond
   room.pickTimer = setTimeout(() => {
@@ -361,6 +347,25 @@ function resolveRound(room) {
       yourIndex: i,
     });
   });
+
+  // Auto-advance: give players 15s to press NEXT ROUND themselves,
+  // then the server advances everyone automatically
+  const AUTO_NEXT_SECS = 15;
+  if (room.nextTimer) clearTimeout(room.nextTimer);
+  // Broadcast countdown so all clients can show it
+  io.to(room.code).emit('round:nextCountdown', { seconds: AUTO_NEXT_SECS });
+  room.nextTimer = setTimeout(() => {
+    room.nextTimer = null;
+    if (room.finished || room.roundPhase !== 'result') return;
+    // Auto-submit next for any player who hasn't pressed yet
+    room.players.forEach(p => {
+      if (!room.nextAcks.has(p.socketId)) room.nextAcks.add(p.socketId);
+    });
+    room.nextAcks = new Set();
+    room.round++;
+    if (room.round >= TOTAL_ROUNDS) endGame(room, 'normal');
+    else emitRound(room);
+  }, AUTO_NEXT_SECS * 1000);
 }
 
 function endGame(room, reason='normal') {
@@ -371,6 +376,7 @@ function endGame(room, reason='normal') {
   if (room.confirmTimer) { clearTimeout(room.confirmTimer); room.confirmTimer = null; }
   if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
   if (room.fillTimer) { clearTimeout(room.fillTimer); room.fillTimer = null; }
+  if (room.nextTimer) { clearTimeout(room.nextTimer); room.nextTimer = null; }
 
   const sorted  = [...room.players].sort((a,b) => b.score - a.score);
   const scores  = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
@@ -657,47 +663,6 @@ io.on('connection', socket => {
     }
   });
 
-  // ── SPECTATE ──
-  socket.on('spectate:join', ({ spectatorName, code }) => {
-    const upper = (code||'').toUpperCase();
-    const room  = rooms[upper];
-    if (!room) return socket.emit('room:error', { message: 'Room not found.' });
-    if (!room.started) return socket.emit('room:error', { message: 'Game not started yet.' });
-
-    const name = spectatorName || 'Spectator';
-    room.spectators.push({ socketId: socket.id, name });
-    socketToRoom[socket.id] = upper;
-    socket.join(upper);
-
-    // Send current game state to spectator
-    const scores = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
-    socket.emit('spectate:state', {
-      players: room.players.map(p => ({ name: p.name, socketId: p.socketId, score: p.score })),
-      round: room.round,
-      totalRounds: TOTAL_ROUNDS,
-      format: room.format,
-      role: room.role || null,
-      scores,
-      pickerIndex: room.pickerIndex,
-      pickerName: room.players[room.pickerIndex]?.name,
-      roundPhase: room.roundPhase,
-      roundStat: room.roundStat,
-    });
-    // Notify players
-    room.players.forEach(p => io.to(p.socketId).emit('spectate:joined', { name }));
-    console.log(`[spectate] ${name} joined room ${upper}`);
-  });
-
-  socket.on('spectate:leave', () => {
-    const code = socketToRoom[socket.id];
-    if (!code) return;
-    const room = rooms[code];
-    if (room) {
-      room.spectators = room.spectators.filter(s => s.socketId !== socket.id);
-    }
-    delete socketToRoom[socket.id];
-    socket.leave(code);
-  });
 
   // ── TOSS READY (both press LET'S PLAY → go to arrange together) ──
   socket.on('toss:ready', () => {
@@ -2555,3 +2520,4 @@ const T20I_CARDS = [
   { id:"rahmanullah_gurbaz_t20i", name:"Rahmanullah Gurbaz", country:"Afghanistan", role:"Wicket-keeper", rarity:"Rare", avatarUrl:null, matches:62, runs:1720, fours:157, sixes:70, fifties:10, hundreds:1, highestScore:118, strikeRate:153.44, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:44, stumpings:10 },
   { id:"sikandar_raza_t20i2", name:"Sikandar Raza", country:"Zimbabwe", role:"All-rounder", rarity:"Rare", avatarUrl:null, matches:85, runs:1956, fours:166, sixes:57, fifties:13, hundreds:0, highestScore:82, strikeRate:128.58, bestBowlingWickets:5, bestBowlingRuns:11, economyRate:7.11, wickets:69, catches:29, stumpings:0 },
 ];
+
