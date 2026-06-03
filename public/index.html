@@ -451,15 +451,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div style="text-align:center;">
       <div style="font-size:32px;margin-bottom:6px;">🏏</div>
       <div class="page-header" style="border:none;padding:0;">SELECT FORMAT</div>
-      <div id="format-player-count-row" class="hidden" style="margin-top:10px;">
-        <div style="font-size:11px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;">NO. OF PLAYERS</div>
-        <div class="player-count-row" style="justify-content:center;">
-          <div class="count-btn active" id="cnt-2" onclick="setPlayerCount(2)">2</div>
-          <div class="count-btn" id="cnt-3" onclick="setPlayerCount(3)">3</div>
-          <div class="count-btn" id="cnt-4" onclick="setPlayerCount(4)">4</div>
-          <div class="count-btn" id="cnt-5" onclick="setPlayerCount(5)">5</div>
-        </div>
-      </div>
+
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;">
       <button class="btn-primary" onclick="selectFormat('ODI')">🌍 ODI</button>
@@ -1013,7 +1005,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div class="dc-title">PLAYER LEFT</div>
     <div class="dc-text" id="dc-text">A player disconnected.</div>
     <div id="dc-countdown-wrap" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;color:var(--gray);margin:6px 0 2px;">
-      RETURNING TO MAIN MENU IN <span id="dc-countdown">5</span>s
+      RETURNING TO MAIN MENU IN <span id="dc-countdown">15</span>s
     </div>
     <button class="btn-exit" onclick="forceReturnToMenu()">MAIN MENU NOW</button>
   </div>
@@ -1357,12 +1349,19 @@ function renderOnlinePlayers(players) {
     return;
   }
   const emojis = ['🏏','🎯','⚡','🌟','🔥','💎'];
-  list.innerHTML = others.map((p, i) => `
-    <div class="online-player-row" onclick="sendChallenge('${p.socketId}','${p.name.replace(/'/g,"\\'")}')">
+  list.innerHTML = others.map((p, i) => {
+    const inGame = p.status === 'in-game';
+    const badge  = inGame
+      ? `<div class="online-player-status" style="color:#888;border-color:#555;background:rgba(80,80,80,.15);letter-spacing:1px;">🎮 IN GAME</div>`
+      : `<div class="online-player-status status-free">⚔ CHALLENGE</div>`;
+    const click  = inGame ? '' : `onclick="sendChallenge('${p.socketId}','${p.name.replace(/'/g,"\\'")}')"`
+    const opacity = inGame ? 'opacity:.55;' : '';
+    return `<div class="online-player-row" ${click} style="${opacity}${inGame ? 'cursor:default;' : ''}">
       <div class="online-player-avatar">${emojis[i%6]}</div>
       <div class="online-player-name">${p.name}</div>
-      <div class="online-player-status status-free">⚔ CHALLENGE</div>
-    </div>`).join('');
+      ${badge}
+    </div>`;
+  }).join('');
 }
 
 function sendChallenge(targetSocketId, targetName) {
@@ -1937,6 +1936,20 @@ function initSocket() {
   });
 
   socket.on('game:opponentDisconnected', ({ opponentName }) => {
+    // Fix #7: in 3+ player games the server continues — just show a brief banner
+    if (G.players.length > 2) {
+      // Remove the player from local list
+      G.players = G.players.filter(p => p.name !== opponentName);
+      const banner = document.getElementById('status-banner');
+      if (banner) {
+        const prev = banner.textContent;
+        banner.textContent = `⚠️ ${opponentName} disconnected — game continues!`;
+        banner.className = 'status-banner wait';
+        setTimeout(() => { if (banner.textContent.includes(opponentName)) banner.textContent = prev; }, 3000);
+      }
+      return;
+    }
+    // 1v1: end game as before
     G.inGame = false;
     document.getElementById('challenge-overlay')?.classList.add('hidden');
     showDisconnectOverlay(`${opponentName} left the game.`);
@@ -2061,8 +2074,8 @@ function showDisconnectOverlay(msg) {
   clearPlayAgainTimer();
   document.getElementById('dc-text').textContent = msg;
   document.getElementById('disconnect-overlay').classList.remove('hidden');
-  // Auto-return to main menu in 5 seconds
-  let secs = 5;
+  // Fix #10: extended to 15s to allow for brief network blips
+  let secs = 15;
   const countEl = document.getElementById('dc-countdown');
   if (countEl) countEl.textContent = secs;
   if (G._dcCountdownTimer) clearInterval(G._dcCountdownTimer);
@@ -2489,7 +2502,6 @@ function mismatchCancel() {
 
 function showFormatSelect() {
   G.onlineMode = false;
-  document.getElementById('format-player-count-row')?.classList.add('hidden');
   document.getElementById('ai-difficulty-row')?.classList.remove('hidden');
   // Show country filter in AI mode
   const cfWrap = document.getElementById('country-filter-wrap');
@@ -2500,7 +2512,6 @@ function showFormatSelect() {
 // Online flow: Format → Role → Lobby
 function showFormatSelectOnline() {
   G.onlineMode = true;
-  document.getElementById('format-player-count-row')?.classList.remove('hidden');
   document.getElementById('ai-difficulty-row')?.classList.add('hidden');
   // Hide country filter in online mode (deck is server-side)
   const cfWrap = document.getElementById('country-filter-wrap');
@@ -5157,13 +5168,22 @@ function leaveSpectate() {
 }
 
 // ── Wire spectate updates ──
+// Fix #12: removed duplicate game:over listener; spectate UI update is handled
+// inside updateSpectateView which checks for isLastRound flag
 function wireSpectateListeners() {
   if (!socket) return;
   socket.on('spectate:roundUpdate', updateSpectateView);
-  socket.on('game:over', () => {
-    const s = document.getElementById('spectate-status');
-    if (s) s.textContent = 'MATCH OVER';
-  });
+  // game:over for spectators: update status text without re-registering the main handler
+  if (!socket._spectateOverBound) {
+    socket._spectateOverBound = true;
+    socket.on('game:over', () => {
+      const el = document.getElementById('spectate-status');
+      if (el && document.getElementById('page-spectate') &&
+          !document.getElementById('page-spectate').classList.contains('hidden')) {
+        el.textContent = 'MATCH OVER';
+      }
+    });
+  }
 }
 
 // Boot — show loading screen, landing appears after tap
