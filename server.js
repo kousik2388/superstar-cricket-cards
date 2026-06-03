@@ -357,7 +357,12 @@ function broadcastOpenRooms() {
       currentPlayers: r.players.length,
       hostName: r.players[0]?.name || 'Host',
     }));
-  io.emit('lobby:openRooms', { rooms: open });
+  // Send personalised list — each player sees rooms they are NOT already in
+  Object.keys(onlinePlayers).forEach(sid => {
+    const myCode = socketToRoom[sid];
+    const filtered = myCode ? open.filter(r => r.code !== myCode) : open;
+    io.to(sid).emit('lobby:openRooms', { rooms: filtered });
+  });
 }
 
 function setPlayerStatus(socketId, status) {
@@ -471,6 +476,23 @@ io.on('connection', socket => {
       setPlayerStatus(targetSocketId,'lobby');
       io.to(targetSocketId).emit('challenge:cancelled', { challengerName: onlinePlayers[socket.id]?.name });
     }
+  });
+
+  // ── CREATE ROOM (manual code) ──
+  // ── INVITE PLAYER TO ROOM ──
+  socket.on('room:invite', ({ targetSocketId, code }) => {
+    const upper = (code || '').toUpperCase();
+    const room  = rooms[upper];
+    if (!room || room.started || room.finished) return;
+    if (!room.players.find(p => p.socketId === socket.id)) return; // only room members can invite
+    const inviter = onlinePlayers[socket.id] || { name: socket._playerName || 'Host' };
+    io.to(targetSocketId).emit('room:inviteReceived', {
+      code: upper,
+      inviterName: inviter.name,
+      maxPlayers: room.maxPlayers,
+      format: room.format,
+      role: room.role || null,
+    });
   });
 
   // ── CREATE ROOM (manual code) ──
