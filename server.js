@@ -159,6 +159,45 @@ function getSquadByRole(deck, role) {
   return deck;
 }
 
+// 120s auto-start countdown for multi-player rooms
+// Host can dismiss via room:keepWaiting for unlimited wait
+function startFillTimer(room) {
+  if (room.keepWaiting || room.started || room.finished) return;
+  let secondsLeft = 120;
+  const tick = setInterval(() => {
+    secondsLeft--;
+    if (room.keepWaiting || room.started || room.finished) { clearInterval(tick); return; }
+    const notify = secondsLeft <= 30 && (secondsLeft <= 10 || secondsLeft % 10 === 0);
+    if (notify) {
+      room.players.forEach(p => io.to(p.socketId).emit('room:fillCountdown', {
+        secondsLeft,
+        playersNow: room.players.length,
+        maxPlayers: room.maxPlayers,
+      }));
+    }
+    if (secondsLeft <= 0) {
+      clearInterval(tick);
+      room.fillTimer = null;
+      if (!room.started && !room.finished) {
+        if (room.players.length >= MIN_PLAYERS) {
+          room.players.forEach(p => io.to(p.socketId).emit('room:fillTimeout', {
+            playersJoined: room.players.length,
+            maxPlayers: room.maxPlayers,
+          }));
+          startGame(room);
+        } else {
+          room.players.forEach(p => io.to(p.socketId).emit('room:dissolved', {
+            reason: 'Not enough players joined in time.',
+          }));
+          delete rooms[room.code];
+          broadcastOpenRooms();
+        }
+      }
+    }
+  }, 1000);
+  room.fillTimer = tick;
+}
+
 function startGame(room) {
   room.started     = true;
   room.round       = 0;
@@ -495,11 +534,13 @@ io.on('connection', socket => {
     });
   });
 
-  // ── CREATE ROOM (manual code) ──
-  socket.on('room:create', ({ playerName, maxPlayers=2, format='ODI', role=null }) => {
+  // ── CREATE ROOM ──
+  socket.on('room:create', ({ playerName, maxPlayers=2, format='ODI', role=null, isPublic=true }) => {
     const code = generateRoomCode();
     const room = createRoom(code, Math.min(Math.max(maxPlayers,2),5), format);
     room.role = role;
+    room.isPublic = !!isPublic;
+    room.keepWaiting = false;
     rooms[code] = room;
     room.players.push({ socketId: socket.id, name: playerName||'Player 1', score: 0 });
     socketToRoom[socket.id] = code;
@@ -507,46 +548,23 @@ io.on('connection', socket => {
     socket.emit('room:created', { code, maxPlayers: room.maxPlayers });
     broadcastOpenRooms();
 
-    // For multi-player rooms: start a 60s fill timer
-    // If room isn't full after 60s but has >=2 players, force-start with whoever joined
+    // Multi-player rooms get a 120s auto-start countdown
+    // Host can dismiss it via room:keepWaiting for unlimited wait
     if (room.maxPlayers > 2) {
-      let secondsLeft = 60;
-      // Broadcast countdown every 10s, then every 1s for last 10s
-      const countdownInterval = setInterval(() => {
-        secondsLeft--;
-        if (room.started || room.finished) { clearInterval(countdownInterval); return; }
-        // Broadcast time update to all in room
-        const isFinalCountdown = secondsLeft <= 10;
-        if (isFinalCountdown || secondsLeft % 10 === 0) {
-          room.players.forEach(p => io.to(p.socketId).emit('room:fillCountdown', {
-            secondsLeft,
-            playersNow: room.players.length,
-            maxPlayers: room.maxPlayers,
-          }));
-        }
-        if (secondsLeft <= 0) {
-          clearInterval(countdownInterval);
-          room.fillTimer = null;
-          if (!room.started && !room.finished) {
-            if (room.players.length >= MIN_PLAYERS) {
-              // Force-start with current players
-              room.players.forEach(p => io.to(p.socketId).emit('room:fillTimeout', {
-                playersJoined: room.players.length,
-                maxPlayers: room.maxPlayers,
-              }));
-              startGame(room);
-            } else {
-              // Not enough players — dissolve room
-              room.players.forEach(p => io.to(p.socketId).emit('room:dissolved', {
-                reason: 'Not enough players joined in time.',
-              }));
-              delete rooms[code];
-            }
-          }
-        }
-      }, 1000);
-      room.fillTimer = countdownInterval; // store interval id (not timeout) for cleanup
+      startFillTimer(room);
     }
+  });
+
+  // ── HOST KEEPS WAITING (dismisses auto-start) ──
+  socket.on('room:keepWaiting', () => {
+    const code = socketToRoom[socket.id];
+    if (!code) return;
+    const room = rooms[code];
+    if (!room || room.started || room.finished) return;
+    if (room.players[0]?.socketId !== socket.id) return; // host only
+    room.keepWaiting = true;
+    if (room.fillTimer) { clearInterval(room.fillTimer); room.fillTimer = null; }
+    room.players.forEach(p => io.to(p.socketId).emit('room:waitingIndefinitely'));
   });
 
   // ── JOIN ROOM (manual code) ──
