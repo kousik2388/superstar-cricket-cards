@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUPERSTAR CRICKET CARDS — Multiplayer Server v3
-// Supports 2-4 players, batting/bowling phase split, podium points
+// SUPERSTAR CRICKET CARDS — Multiplayer Server v4
+// Supports 2-5 players, batting/bowling phase split, podium points
 // ═══════════════════════════════════════════════════════════════════════════════
 const express    = require('express');
 const http       = require('http');
@@ -31,7 +31,7 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const TOTAL_ROUNDS     = 10;
 const BATTING_ROUNDS   = 5;   // rounds 0-4 = batting, 5-9 = bowling
-const MAX_PLAYERS      = 4;
+const MAX_PLAYERS      = 5;
 const MIN_PLAYERS      = 2;
 
 const BATTING_STATS  = ['matches','runs','fours','sixes','fifties','hundreds','highestScore','strikeRate'];
@@ -129,7 +129,8 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     pickTimer: null,
     confirmTimer: null,
     playAgainTimer: null,
-    fillTimer: null,       // 60s wait for players to fill room before force-starting
+    fillTimer: null,
+    cleanupTimer: null,    // fix #3: handle for 30s post-game delete timer
   };
 }
 
@@ -238,6 +239,9 @@ function startGame(room) {
     });
   });
 
+  // Mark all players as in-game so they appear correctly in the lobby
+  room.players.forEach(p => setPlayerStatus(p.socketId, 'in-game'));
+
   // Do NOT call emitRound yet — wait for all players to finish arranging (hand:reorder)
 }
 
@@ -258,6 +262,7 @@ function broadcastSpectateState(room) {
 function emitRound(room) {
   room.roundStat   = null;
   room.roundPhase  = 'pick';
+  room.nextAcks    = new Set();  // fix #8: reset before each round so early acks don't skip rounds
   room.confirmAcks = new Set();
 
   // Clear any previous pick timer
@@ -295,6 +300,7 @@ function emitRound(room) {
 }
 
 function emitStatChosen(room, statKey) {
+  room.confirmAcks = new Set();  // fix #5: clear stale acks before new confirm phase
   room.roundStat  = statKey;
   room.roundPhase = 'confirm';
 
@@ -372,16 +378,18 @@ function endGame(room, reason='normal') {
 
   room.players.forEach((p, i) => {
     io.to(p.socketId).emit('game:over', { ...payload, yourIndex: i });
+    // Reset status so players re-appear as available in lobby
+    if (reason !== 'disconnect') setPlayerStatus(p.socketId, 'lobby');
   });
 
-  setTimeout(() => { delete rooms[room.code]; }, 30000);
+  room.cleanupTimer = setTimeout(() => { delete rooms[room.code]; room.cleanupTimer = null; }, 30000);
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function broadcastOnlinePlayers() {
   const list = Object.entries(onlinePlayers)
-    .filter(([, p]) => p.status === 'lobby')
-    .map(([socketId, p]) => ({ socketId, name: p.name, format: p.format, role: p.role }));
+    .filter(([, p]) => p.status === 'lobby' || p.status === 'in-game')
+    .map(([socketId, p]) => ({ socketId, name: p.name, format: p.format, role: p.role, status: p.status }));
   io.emit('lobby:playerList', { players: list });
 }
 
@@ -614,29 +622,7 @@ io.on('connection', socket => {
     startGame(room);
   });
 
-  // ── LEGACY QUICK MATCH ──
-  socket.on('matchmaking:join', ({ playerName, format='ODI' }) => {
-    const staleIdx = matchmakingQueue.findIndex(s => !io.sockets.sockets.get(s.id));
-    if (staleIdx !== -1) matchmakingQueue.splice(staleIdx, 1);
-    if (matchmakingQueue.length > 0) {
-      const opp  = matchmakingQueue.shift();
-      const code = generateRoomCode();
-      const room = createRoom(code, 2, format);
-      rooms[code] = room;
-      room.players.push({ socketId: opp.id,    name: opp._playerName||'Player 1', score: 0 });
-      room.players.push({ socketId: socket.id, name: playerName||'Player 2',      score: 0 });
-      socketToRoom[opp.id] = code; socketToRoom[socket.id] = code;
-      opp.join(code); socket.join(code);
-      io.to(opp.id).emit('matchmaking:matched',    { opponentName: playerName||'Player 2', code });
-      io.to(socket.id).emit('matchmaking:matched', { opponentName: opp._playerName||'Player 1', code });
-      startGame(room);
-    } else {
-      socket._playerName = playerName;
-      matchmakingQueue.push(socket);
-      socket.emit('matchmaking:waiting');
-    }
-  });
-
+  // Legacy matchmaking:cancel — kept for client compatibility (matchmaking:join removed, fix #14)
   socket.on('matchmaking:cancel', () => {
     const idx = matchmakingQueue.indexOf(socket);
     if (idx !== -1) matchmakingQueue.splice(idx, 1);
@@ -731,9 +717,11 @@ io.on('connection', socket => {
     const code = socketToRoom[socket.id];
     if (!code) return;
     const room = rooms[code];
-    if (!room || room.finished || room.roundPhase !== 'pick') return;
+    if (!room || room.finished || room.roundPhase !== 'pick') return;  // 'picked' also blocks re-entry
     const picker = room.players[room.pickerIndex];
     if (socket.id !== picker.socketId) return;
+    // Fix #6: lock phase immediately to prevent double-pick race
+    room.roundPhase = 'picked';
     // Clear pick timer since picker responded in time
     if (room.pickTimer) { clearTimeout(room.pickTimer); room.pickTimer = null; }
     emitStatChosen(room, statKey);
@@ -780,6 +768,8 @@ io.on('connection', socket => {
     if (room.playAgainAcks.size >= room.players.length) {
       // All players agreed — cancel any pending timeout and start new game
       if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
+      // Fix #3: cancel the 30s room-delete timer from endGame before restarting
+      if (room.cleanupTimer) { clearTimeout(room.cleanupTimer); room.cleanupTimer = null; }
       room.playAgainAcks = new Set();
       room.nextAcks = new Set();
       room.confirmAcks = new Set();
@@ -852,17 +842,88 @@ io.on('connection', socket => {
     const remaining = room.players.filter(p => p.socketId !== socket.id);
 
     if (room.started && !room.finished) {
+      // Notify everyone about the disconnect
       remaining.forEach(p => {
         io.to(p.socketId).emit('game:opponentDisconnected', { opponentName: left?.name || 'Opponent' });
-        // Return remaining players to lobby
-        if (onlinePlayers[p.socketId]) setPlayerStatus(p.socketId, 'lobby');
-        delete socketToRoom[p.socketId];
       });
-      endGame(room, 'disconnect');
+
+      // Fix #10: brief grace period for reconnects before acting on disconnect
+      // (the actual logic runs immediately here since we remove the player; the 12s
+      //  grace is for the client — they see the overlay and can wait)
+
+      if (remaining.length >= MIN_PLAYERS) {
+        // Fix #7: enough players remain — remove disconnected player and continue
+        room.players = remaining;
+        delete room.hands[socket.id];
+        // If it was the disconnected player's turn to pick, advance to next
+        if (room.pickerIndex >= room.players.length) room.pickerIndex = 0;
+        // If we were in 'pick' or 'picked' phase and the disconnected player was picker, auto-advance
+        if ((room.roundPhase === 'pick' || room.roundPhase === 'picked') &&
+            left && room.players[room.pickerIndex]?.socketId !== left.socketId) {
+          // phase already has someone else picking — no action needed
+        }
+        // If disconnected player was a non-picker in 'confirm' phase, they may have been blocking resolve
+        if (room.roundPhase === 'confirm') {
+          const picker = room.players[room.pickerIndex];
+          const nonPickers = room.players.filter(p => p.socketId !== picker?.socketId);
+          if (room.confirmAcks.size >= nonPickers.length) {
+            if (room.confirmTimer) { clearTimeout(room.confirmTimer); room.confirmTimer = null; }
+            resolveRound(room);
+          }
+        }
+        // If disconnected player was blocking next-round advance
+        if (room.roundPhase === 'result') {
+          if (room.nextAcks.size >= room.players.length) {
+            room.nextAcks = new Set();
+            room.round++;
+            if (room.round >= TOTAL_ROUNDS) endGame(room, 'normal');
+            else emitRound(room);
+          }
+        }
+      } else {
+        // Only 1 player left — end game
+        remaining.forEach(p => {
+          if (onlinePlayers[p.socketId]) setPlayerStatus(p.socketId, 'lobby');
+          delete socketToRoom[p.socketId];
+        });
+        endGame(room, 'disconnect');
+        delete rooms[code];
+      }
+    } else if (!room.started) {
+      // Pre-game room: remove player, update waiting room
+      room.players = room.players.filter(p => p.socketId !== socket.id);
+      if (room.players.length === 0) {
+        if (room.fillTimer) clearInterval(room.fillTimer);
+        delete rooms[code];
+      } else {
+        const playerList = room.players.map(p => ({ name: p.name, socketId: p.socketId }));
+        room.players.forEach(p => io.to(p.socketId).emit('room:playerJoined', {
+          players: playerList, maxPlayers: room.maxPlayers,
+          canStart: room.players.length >= MIN_PLAYERS,
+          format: room.format, role: room.role || null,
+        }));
+        broadcastOpenRooms();
+      }
     }
-    delete rooms[code];
   });
 });
+
+// Fix #15: clean up stale/expired pending challenges every 60s
+setInterval(() => {
+  const now = Date.now();
+  for (const [cId, ch] of Object.entries(pendingChallenges)) {
+    if (now > ch.expiresAt) {
+      const targetId = ch.targetSocketId;
+      delete pendingChallenges[cId];
+      if (onlinePlayers[cId])      onlinePlayers[cId].status = 'lobby';
+      if (onlinePlayers[targetId]) onlinePlayers[targetId].status = 'lobby';
+      io.to(cId).emit('challenge:cancelled',  { challengerName: 'Server (timeout)' });
+      io.to(targetId).emit('challenge:cancelled', { challengerName: 'Server (timeout)' });
+    }
+  }
+  broadcastOnlinePlayers();
+}, 60000);
+
 
 server.listen(PORT, () => {
   console.log(`\n🏏 Superstar Cricket Cards server running on port ${PORT}`);
