@@ -261,6 +261,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .stat-btn.rank-2{background:rgba(160,180,200,.18);border-color:#a0b4c8;animation:none}
 .stat-btn.rank-3{background:rgba(180,120,60,.15);border-color:#c8844a;animation:none}
 .stat-btn.rank-4{background:rgba(232,64,64,.12);border-color:var(--red);animation:none}
+.stat-btn.rank-5{background:rgba(80,80,80,.1);border-color:#555;animation:none}
 .stat-label{font-size:11px;color:var(--gray);flex:1}
 .stat-value{font-weight:700;font-size:13px;color:var(--white);min-width:52px;text-align:right}
 .stat-value.hl{color:var(--gold)}
@@ -300,6 +301,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .podium-chip.p2{background:rgba(160,180,200,.12);border-color:#a0b4c8;color:#a0b4c8}
 .podium-chip.p3{background:rgba(180,120,60,.1);border-color:#c8844a;color:#c8844a}
 .podium-chip.p4{background:rgba(100,100,100,.1);border-color:#666;color:#888}
+.podium-chip.p5{background:rgba(80,80,80,.08);border-color:#555;color:#777}
 .podium-medal{font-size:16px}
 .podium-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .podium-pts{font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:1px}
@@ -335,6 +337,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px}
 .final-rank-row.rank-1{border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.06)}
 .final-rank-row.rank-2{border-color:rgba(160,180,200,.3)}
+.final-rank-row.rank-3{border-color:rgba(180,120,60,.25)}
+.final-rank-row.rank-4{border-color:rgba(232,64,64,.2)}
+.final-rank-row.rank-5{border-color:rgba(80,80,80,.15)}
 .final-rank-row.me{box-shadow:0 0 0 1px var(--gold)}
 .final-medal{font-size:22px;width:28px;text-align:center}
 .final-rank-name{flex:1;font-weight:700;font-size:15px}
@@ -711,7 +716,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         <div id="open-rooms-list" style="display:flex;flex-direction:column;gap:6px;min-height:80px;">
           <div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">No open rooms right now.</div>
         </div>
-        <button class="btn-green" onclick="hostOpenRoom()" style="font-size:16px;padding:10px;">+ HOST A ROOM</button>
+        <!-- Host a Room section -->
+        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:10px;margin-top:4px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;text-align:center;">HOST A NEW ROOM</div>
+          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
+            <div class="count-btn active" id="lobby-cnt-2" onclick="setLobbyPlayerCount(2)" style="max-width:44px;">2</div>
+            <div class="count-btn"        id="lobby-cnt-3" onclick="setLobbyPlayerCount(3)" style="max-width:44px;">3</div>
+            <div class="count-btn"        id="lobby-cnt-4" onclick="setLobbyPlayerCount(4)" style="max-width:44px;">4</div>
+            <div class="count-btn"        id="lobby-cnt-5" onclick="setLobbyPlayerCount(5)" style="max-width:44px;">5</div>
+          </div>
+          <button class="btn-green" onclick="hostOpenRoom()" style="font-size:15px;padding:10px;width:100%;">🏠 HOST ROOM</button>
+        </div>
       </div>
       <!-- Code tab -->
       <div id="lobby-tab-code" class="hidden" style="width:100%;display:flex;flex-direction:column;gap:8px;">
@@ -964,7 +979,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════
 const TOTAL_ROUNDS  = 10;
-const PODIUM_POINTS = [3,2,1,0];  // used for 3-4 players only
+const PODIUM_POINTS = [4,3,2,1,0];  // used for 3-5 players
 
 // In 1v1: winner gets 1 round win, loser gets 0. No podium points.
 // In 3-4p: use podium points.
@@ -972,8 +987,8 @@ function awardPoints(rank, totalPlayers) {
   if (totalPlayers <= 2) return rank === 0 ? 1 : 0;
   return PODIUM_POINTS[rank] ?? 0;
 }
-const MEDALS        = ['🥇','🥈','🥉','4️⃣'];
-const PODIUM_CLASSES= ['p1','p2','p3','p4'];
+const MEDALS        = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+const PODIUM_CLASSES= ['p1','p2','p3','p4','p5'];
 
 const STAT_CONFIG = [
   { key:'matches',      label:'Matches', lowerBetter:false },
@@ -1184,7 +1199,9 @@ const SFX = (() => {
       }
     } catch(e) {}
   }
-  function toggleMute() { muted = !muted; return muted; }
+  function toggleMute() { muted = !muted; try { localStorage.setItem('scc_muted', muted ? '1' : '0'); } catch(e){} return muted; }
+  function loadMutePref() { try { if (localStorage.getItem('scc_muted') === '1') muted = true; } catch(e){} }
+  loadMutePref();
   return { play, toggleMute, isMuted: () => muted };
 })();
 
@@ -1260,6 +1277,8 @@ function enterOnlineLobby() {
     '<div style="text-align:center;color:var(--gold);font-size:13px;padding:20px 0;">Connecting…</div>';
   setLobbyError('');
   switchLobbyTab('players');
+  // Sync lobby room-host player count buttons to current selection
+  setLobbyPlayerCount(G.selectedPlayerCount || 2);
   initSocket();
   const doEnter = () => socket.emit('lobby:enter', {
     playerName: n, format: G.selectedFormat||'ODI', role: G.selectedRole||null,
@@ -1294,20 +1313,40 @@ function renderOnlinePlayers(players) {
     list.innerHTML = `<div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">No players online right now.<br><span style="font-size:11px;opacity:.6;">Share the link to invite a friend!</span></div>`;
     return;
   }
+  const cnt = G.selectedPlayerCount || 2;
+  const isMulti = cnt > 2;
+  const actionLabel = isMulti ? `👥 INVITE (${cnt}P)` : '⚔ CHALLENGE';
+  const statusCls = 'online-player-status status-free';
   const emojis = ['🏏','🎯','⚡','🌟','🔥','💎'];
   list.innerHTML = others.map((p, i) => `
     <div class="online-player-row" onclick="sendChallenge('${p.socketId}','${p.name.replace(/'/g,"\\'")}')">
       <div class="online-player-avatar">${emojis[i%6]}</div>
       <div class="online-player-name">${p.name}</div>
-      <div class="online-player-status status-free">⚔ CHALLENGE</div>
+      <div class="${statusCls}">${actionLabel}</div>
     </div>`).join('');
 }
 
-function sendChallenge(targetSocketId, targetName, targetFormat, targetRole) {
+function sendChallenge(targetSocketId, targetName) {
   if (!socket) return;
-  G._challengeTargetId = targetSocketId;
-  socket.emit('challenge:send', { targetSocketId });
-  showMatchmakingScreen('challenging', targetName);
+  const cnt = G.selectedPlayerCount || 2;
+  if (cnt > 2) {
+    // Multi-player: create a public room first, then invite this specific player
+    G._challengeTargetId = targetSocketId;
+    socket.emit('room:create', {
+      playerName: G.myName,
+      maxPlayers: cnt,
+      format: G.selectedFormat || 'ODI',
+      role: G.selectedRole || null,
+    });
+    // After room:created fires, we invite the player (handled in socket event)
+    G._pendingInviteTarget = { socketId: targetSocketId, name: targetName };
+    showMatchmakingScreen('challenging', targetName);
+  } else {
+    G._challengeTargetId = targetSocketId;
+    G._pendingInviteTarget = null;
+    socket.emit('challenge:send', { targetSocketId });
+    showMatchmakingScreen('challenging', targetName);
+  }
 }
 
 function cancelMatchmaking() {
@@ -1679,6 +1718,23 @@ function initSocket() {
     renderOpenRooms(rooms);
   });
 
+  socket.on('room:inviteReceived', ({ code, inviterName, maxPlayers, format, role }) => {
+    // Reuse challenge popup to show room invite
+    const roleStr = role ? ` • ${role.toUpperCase()}` : '';
+    document.getElementById('challenge-text').innerHTML =
+      `<strong>${inviterName}</strong> invites you to a <strong>${maxPlayers}-player ${format}${roleStr}</strong> room!`;
+    // Override accept button to join the room instead
+    const acceptBtn = document.getElementById('challenge-accept-btn');
+    acceptBtn.textContent = '🏠 JOIN ROOM';
+    acceptBtn.onclick = () => {
+      document.getElementById('challenge-overlay').classList.add('hidden');
+      acceptBtn.textContent = '⚔️ ACCEPT'; // reset
+      acceptBtn.onclick = acceptChallenge;  // reset
+      joinOpenRoom(code);
+    };
+    document.getElementById('challenge-overlay').classList.remove('hidden');
+  });
+
   socket.on('challenge:declined', ({ targetName }) => {
     returnToOnlineLobby(`${targetName || 'Player'} declined your challenge.`);
   });
@@ -1699,7 +1755,14 @@ function initSocket() {
   socket.on('room:created', ({ code, maxPlayers }) => {
     G.roomCode = code; G.isHost = true;
     G.players = [{ socketId: socket.id, name: G.myName, score: 0 }];
-    showWaitingRoom(code, maxPlayers, true);
+    // If this room was created to invite a specific player, send them an invite
+    if (G._pendingInviteTarget) {
+      socket.emit('room:invite', { targetSocketId: G._pendingInviteTarget.socketId, code });
+      showWaitingRoom(code, maxPlayers, true);
+      G._pendingInviteTarget = null;
+    } else {
+      showWaitingRoom(code, maxPlayers, true);
+    }
   });
 
   socket.on('room:playerJoined', ({ players, maxPlayers, canStart, format, role }) => {
@@ -1947,6 +2010,9 @@ function showLanding() {
   ['disconnect-overlay','result-overlay','quit-overlay','challenge-overlay'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
+  // Sync mute button to persisted preference
+  const btn = document.getElementById('mute-btn');
+  if (btn) btn.textContent = SFX.isMuted() ? '🔇' : '🔊';
   showPage('page-landing');
 }
 function showRules() { showPage('page-rules'); }
@@ -1994,8 +2060,9 @@ function setAIDifficulty(d) {
 
 function setPlayerCount(n) {
   G.selectedPlayerCount = n;
-  [2,3,4].forEach(i => {
-    document.getElementById(`cnt-${i}`).className = 'count-btn' + (i===n?' active':'');
+  [2,3,4,5].forEach(i => {
+    const el = document.getElementById(`cnt-${i}`);
+    if (el) el.className = 'count-btn' + (i===n?' active':'');
   });
 }
 
@@ -2202,6 +2269,14 @@ function joinOpenRoom(code) {
   const n = G.myName || document.getElementById('player-name-input')?.value?.trim();
   if (!n) { setLobbyError('Enter your name first.'); switchLobbyTab('players'); return; }
   socket.emit('room:join', { playerName: n, code });
+}
+
+function setLobbyPlayerCount(n) {
+  G.selectedPlayerCount = n;
+  [2,3,4,5].forEach(i => {
+    const el = document.getElementById(`lobby-cnt-${i}`);
+    if (el) el.className = 'count-btn' + (i===n?' active':'');
+  });
 }
 
 function hostOpenRoom() {
@@ -2494,9 +2569,10 @@ function startAIGame() {
   const aiCards = deck.slice(10, 20);
   const aiId    = 'ai_player';
 
+  const aiLabel = 'AI (' + (G.aiDifficulty || 'medium').charAt(0).toUpperCase() + (G.aiDifficulty || 'medium').slice(1) + ')';
   G.players  = [
     { socketId: 'player', name: 'You', score: 0 },
-    { socketId: aiId,     name: 'AI',  score: 0 },
+    { socketId: aiId,     name: aiLabel,  score: 0 },
   ];
   G.aiHands  = { [aiId]: aiCards };
   G.oppCards = {};
@@ -2741,7 +2817,7 @@ function aiResolveRound() {
   const iWon        = myEntry.rank === 0;
   const isDraw      = ranked.filter(r=>r.rank===0).length>1 && iWon;
   const isLastRound = G.round + 1 >= TOTAL_ROUNDS;
-  const nextPickerName = G.pickerIndex === 0 ? 'You' : 'AI';
+  const nextPickerName = G.pickerIndex === 0 ? 'You' : (G.players[1]?.name || 'AI');
 
   updateScoreboardBar();
   showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
@@ -2836,7 +2912,7 @@ function buildCard(card, { clickable=false, selected=null, blink=null, result=nu
     </div>
     <div class="card-avatar">
       ${card.avatarUrl
-        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy">`
+        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy" onerror="this.style.display='none';this.parentNode.innerHTML+='<div class=\\"player-silhouette\\">🏏</div><div class=\\"player-initials\\">${initials}</div>'">`
         : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`
       }
     </div>
@@ -2880,7 +2956,7 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   }
   const opV = displayVal(oppCardForStat, statKey);
   const myName  = G.myName || 'You';
-  const oppName = (mode === 'ai') ? (G.oppName || 'AI') : (G.players.find(p=>p.socketId!==socket?.id)?.name || 'Opponent');
+  const oppName = (mode === 'ai') ? (G.players[1]?.name || G.oppName || 'AI') : (G.players.find(p=>p.socketId!==socket?.id)?.name || 'Opponent');
   statLine.innerHTML = `Challenge: <strong>${sc.label}</strong> &mdash; <span style="color:var(--gold)">${myV}</span> (${myName}) vs <span style="color:var(--blue)">${opV}</span> (${oppName})`;
 
   // Podium chips
@@ -2900,7 +2976,8 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   }
 
   // Cards — build a mini card for each player
-  const rankClassMap = ['rank-1','rank-2','rank-3','rank-4'];
+  const rankClassMap = ['rank-1','rank-2','rank-3','rank-4','rank-5'];
+  const lastRankIdx  = Math.min(rankClassMap.length - 1, (ranked?.length ?? 2) - 1);
   cardsArea.innerHTML = '';
 
   // Build all player card wraps
@@ -2909,19 +2986,19 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   if (mode === 'ai') {
     // My card
     const myRank = ranked.find(e=>e.socketId==='player');
-    const myCls  = rankClassMap[myRank?.rank ?? 3];
+    const myCls  = rankClassMap[myRank?.rank ?? lastRankIdx];
     allWraps.push({ label:'★ YOUR CARD', labelCls:'you', card: G.myCard, rc: myCls, isMe: true });
     // AI card
     const aiId   = 'ai_player';
     const aiRank = ranked.find(e=>e.socketId===aiId);
-    const aiCls  = rankClassMap[aiRank?.rank ?? 3];
-    allWraps.push({ label:'🤖 AI', labelCls:'opp', card: allCards[aiId], rc: aiCls, isMe: false });
+    const aiCls  = rankClassMap[aiRank?.rank ?? lastRankIdx];
+    allWraps.push({ label:'🤖 ' + (G.players[1]?.name || 'AI'), labelCls:'opp', card: allCards[aiId], rc: aiCls, isMe: false });
   } else {
     // Online: my card first, then opponents
     G.players.forEach((p, i) => {
       const isMe   = p.socketId === socket.id;
       const rEntry = ranked?.find(e=>e.socketId===p.socketId);
-      const cls    = rankClassMap[rEntry?.rank ?? 3];
+      const cls    = rankClassMap[rEntry?.rank ?? lastRankIdx];
       const card   = allCards[p.socketId];
       const label  = isMe ? '★ YOU' : p.name;
       const pts = rEntry
