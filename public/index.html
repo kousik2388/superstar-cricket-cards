@@ -699,47 +699,88 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
         <button id="tab-rooms" onclick="switchLobbyTab('rooms')"
           style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--gray);
           border-radius:4px;font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;
-          padding:7px 4px;cursor:pointer;">🏠 OPEN ROOMS</button>
-        <button id="tab-code" onclick="switchLobbyTab('code')"
-          style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--gray);
-          border-radius:4px;font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;
-          padding:7px 4px;cursor:pointer;">🔑 CODE</button>
+          padding:7px 4px;cursor:pointer;">🏠 ROOMS</button>
       </div>
-      <!-- Players tab -->
+      <!-- Players tab: 1v1 challenges only -->
       <div id="lobby-tab-players" style="width:100%;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--gray);text-align:center;padding:2px 0;">CLICK A PLAYER TO CHALLENGE 1v1</div>
         <div id="online-players-list" style="display:flex;flex-direction:column;gap:6px;min-height:80px;">
           <div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">Looking for players…</div>
         </div>
       </div>
-      <!-- Open rooms tab -->
-      <div id="lobby-tab-rooms" class="hidden" style="width:100%;display:flex;flex-direction:column;gap:6px;">
-        <div id="open-rooms-list" style="display:flex;flex-direction:column;gap:6px;min-height:80px;">
-          <div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">No open rooms right now.</div>
+
+      <!-- Rooms tab: Public rooms + private code join -->
+      <div id="lobby-tab-rooms" class="hidden" style="width:100%;display:flex;flex-direction:column;gap:10px;">
+
+        <!-- PUBLIC ROOMS section -->
+        <div style="font-size:10px;letter-spacing:2px;color:var(--gold);margin-bottom:2px;">🌐 PUBLIC ROOMS</div>
+
+        <!-- Size filter pills -->
+        <div style="display:flex;gap:5px;justify-content:center;">
+          <div class="count-btn active" id="pub-cnt-2" onclick="setPublicRoomSize(2)" style="max-width:44px;">2</div>
+          <div class="count-btn"        id="pub-cnt-3" onclick="setPublicRoomSize(3)" style="max-width:44px;">3</div>
+          <div class="count-btn"        id="pub-cnt-4" onclick="setPublicRoomSize(4)" style="max-width:44px;">4</div>
+          <div class="count-btn"        id="pub-cnt-5" onclick="setPublicRoomSize(5)" style="max-width:44px;">5</div>
         </div>
-        <!-- Host a Room section -->
-        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:10px;margin-top:4px;">
-          <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;text-align:center;">HOST A NEW ROOM</div>
-          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
-            <div class="count-btn active" id="lobby-cnt-2" onclick="setLobbyPlayerCount(2)" style="max-width:44px;">2</div>
-            <div class="count-btn"        id="lobby-cnt-3" onclick="setLobbyPlayerCount(3)" style="max-width:44px;">3</div>
-            <div class="count-btn"        id="lobby-cnt-4" onclick="setLobbyPlayerCount(4)" style="max-width:44px;">4</div>
-            <div class="count-btn"        id="lobby-cnt-5" onclick="setLobbyPlayerCount(5)" style="max-width:44px;">5</div>
+
+        <!-- HOST / JOIN buttons -->
+        <div style="display:flex;gap:6px;">
+          <button class="btn-green"     onclick="hostPublicRoom()"  style="flex:1;font-size:13px;padding:9px 4px;">🏠 HOST</button>
+          <button class="btn-secondary" onclick="joinPublicRoom()"  style="flex:1;font-size:13px;padding:9px 4px;color:var(--blue);border-color:var(--blue);">🔍 JOIN</button>
+        </div>
+
+        <!-- Filtered public rooms list (shown when JOIN is active) -->
+        <div id="public-rooms-list" class="hidden" style="display:flex;flex-direction:column;gap:6px;min-height:60px;">
+          <div style="text-align:center;color:var(--gray);font-size:13px;padding:12px 0;">No public rooms for this size.</div>
+        </div>
+
+        <!-- Divider -->
+        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:8px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;">🔑 PRIVATE ROOM (ENTER CODE)</div>
+          <div style="display:flex;gap:8px;">
+            <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4"
+              style="flex:1;font-size:20px;letter-spacing:6px;" oninput="this.value=this.value.toUpperCase()">
+            <button class="btn-primary" onclick="joinRoom()" style="width:auto;padding:0 16px;font-size:16px;">JOIN</button>
           </div>
-          <button class="btn-green" onclick="hostOpenRoom()" style="font-size:15px;padding:10px;width:100%;">🏠 HOST ROOM</button>
+          <button class="btn-secondary" onclick="showHostPrivateModal()"
+            style="width:100%;margin-top:6px;font-size:13px;padding:8px;color:var(--gray);">+ HOST PRIVATE ROOM</button>
         </div>
       </div>
-      <!-- Code tab -->
+
+      <!-- Code tab repurposed as host-private-room (hidden, kept for back-compat) -->
       <div id="lobby-tab-code" class="hidden" style="width:100%;display:flex;flex-direction:column;gap:8px;">
         <div style="font-size:12px;color:var(--gray);">Enter room code to join a specific room:</div>
         <div style="display:flex;gap:8px;">
-          <input class="input-field code-input" id="room-code-input" placeholder="ABCD" maxlength="4" style="flex:1;font-size:20px;letter-spacing:6px;">
-          <button class="btn-primary" onclick="joinRoom()" style="width:auto;padding:0 16px;font-size:16px;">JOIN</button>
+          <input class="input-field code-input" id="room-code-input-2" placeholder="ABCD" maxlength="4" style="flex:1;font-size:20px;letter-spacing:6px;">
+          <button class="btn-primary" onclick="joinRoomByCode2()" style="width:auto;padding:0 16px;font-size:16px;">JOIN</button>
         </div>
       </div>
     </div>
 
     <div class="error-msg" id="lobby-error"></div>
     <button class="btn-secondary" style="width:100%;" onclick="exitOnlineLobby()">← BACK</button>
+  </div>
+</div>
+
+<!-- HOST PRIVATE ROOM MODAL -->
+<div id="host-private-modal" class="hidden" style="position:fixed;inset:0;z-index:240;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="background:linear-gradient(160deg,#1a2a3a,#0d1a28);border:2px solid var(--gold);
+    border-radius:16px;padding:24px;text-align:center;max-width:300px;width:90%;
+    animation:pop-in .3s cubic-bezier(.175,.885,.32,1.275);">
+    <div style="font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:3px;color:var(--gold);margin-bottom:12px;">HOST PRIVATE ROOM</div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:8px;">NO. OF PLAYERS</div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;">
+      <div class="count-btn active" id="priv-cnt-2" onclick="setPrivateRoomSize(2)" style="max-width:44px;">2</div>
+      <div class="count-btn"        id="priv-cnt-3" onclick="setPrivateRoomSize(3)" style="max-width:44px;">3</div>
+      <div class="count-btn"        id="priv-cnt-4" onclick="setPrivateRoomSize(4)" style="max-width:44px;">4</div>
+      <div class="count-btn"        id="priv-cnt-5" onclick="setPrivateRoomSize(5)" style="max-width:44px;">5</div>
+    </div>
+    <button class="btn-primary" onclick="confirmHostPrivateRoom()" style="width:100%;margin-bottom:8px;">CREATE ROOM ▶</button>
+    <button onclick="document.getElementById('host-private-modal').classList.add('hidden')"
+      style="background:transparent;color:var(--gray);border:none;font-family:'Bebas Neue',cursive;
+      font-size:15px;letter-spacing:2px;padding:6px;cursor:pointer;width:100%;">CANCEL</button>
   </div>
 </div>
 
@@ -833,7 +874,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <!-- Fill countdown (shown for multi-player rooms) -->
     <div id="fill-countdown-wrap" class="hidden" style="width:100%;max-width:320px;text-align:center;">
       <div style="background:rgba(240,192,64,.07);border:1px solid rgba(240,192,64,.2);border-radius:10px;padding:12px 16px;">
-        <div style="font-size:11px;letter-spacing:2px;color:var(--gray);margin-bottom:4px;">GAME STARTS IN</div>
+        <div style="font-size:11px;letter-spacing:2px;color:var(--gray);margin-bottom:4px;">AUTO-START IN</div>
         <div id="fill-countdown-secs" style="font-family:'Bebas Neue',cursive;font-size:40px;color:var(--gold);line-height:1;">60</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">unless all players join sooner</div>
       </div>
@@ -847,10 +888,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <div id="fill-timeout-msg" style="font-size:12px;color:var(--gray);margin-top:3px;">Starting with current players…</div>
     </div>
 
-    <div id="start-btn-wrap" class="hidden" style="width:100%;max-width:320px;">
+    <div id="start-btn-wrap" class="hidden" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px;">
       <button class="btn-primary" id="start-game-btn" onclick="hostStartGame()" disabled>
         WAITING FOR MORE PLAYERS…
       </button>
+      <button id="keep-waiting-btn" class="hidden" onclick="hostKeepWaiting()"
+        style="background:rgba(255,255,255,.06);color:var(--gray);border:1px solid rgba(255,255,255,.15);
+        border-radius:4px;font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:2px;
+        padding:9px;cursor:pointer;width:100%;">⏳ KEEP WAITING FOR MORE</button>
     </div>
     <button class="btn-danger" style="max-width:280px;" onclick="cancelWaiting()">CANCEL</button>
   </div>
@@ -1277,8 +1322,6 @@ function enterOnlineLobby() {
     '<div style="text-align:center;color:var(--gold);font-size:13px;padding:20px 0;">Connecting…</div>';
   setLobbyError('');
   switchLobbyTab('players');
-  // Sync lobby room-host player count buttons to current selection
-  setLobbyPlayerCount(G.selectedPlayerCount || 2);
   initSocket();
   const doEnter = () => socket.emit('lobby:enter', {
     playerName: n, format: G.selectedFormat||'ODI', role: G.selectedRole||null,
@@ -1313,40 +1356,21 @@ function renderOnlinePlayers(players) {
     list.innerHTML = `<div style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0;">No players online right now.<br><span style="font-size:11px;opacity:.6;">Share the link to invite a friend!</span></div>`;
     return;
   }
-  const cnt = G.selectedPlayerCount || 2;
-  const isMulti = cnt > 2;
-  const actionLabel = isMulti ? `👥 INVITE (${cnt}P)` : '⚔ CHALLENGE';
-  const statusCls = 'online-player-status status-free';
   const emojis = ['🏏','🎯','⚡','🌟','🔥','💎'];
   list.innerHTML = others.map((p, i) => `
     <div class="online-player-row" onclick="sendChallenge('${p.socketId}','${p.name.replace(/'/g,"\\'")}')">
       <div class="online-player-avatar">${emojis[i%6]}</div>
       <div class="online-player-name">${p.name}</div>
-      <div class="${statusCls}">${actionLabel}</div>
+      <div class="online-player-status status-free">⚔ CHALLENGE</div>
     </div>`).join('');
 }
 
 function sendChallenge(targetSocketId, targetName) {
   if (!socket) return;
-  const cnt = G.selectedPlayerCount || 2;
-  if (cnt > 2) {
-    // Multi-player: create a public room first, then invite this specific player
-    G._challengeTargetId = targetSocketId;
-    socket.emit('room:create', {
-      playerName: G.myName,
-      maxPlayers: cnt,
-      format: G.selectedFormat || 'ODI',
-      role: G.selectedRole || null,
-    });
-    // After room:created fires, we invite the player (handled in socket event)
-    G._pendingInviteTarget = { socketId: targetSocketId, name: targetName };
-    showMatchmakingScreen('challenging', targetName);
-  } else {
-    G._challengeTargetId = targetSocketId;
-    G._pendingInviteTarget = null;
-    socket.emit('challenge:send', { targetSocketId });
-    showMatchmakingScreen('challenging', targetName);
-  }
+  G._challengeTargetId = targetSocketId;
+  G._pendingInviteTarget = null;
+  socket.emit('challenge:send', { targetSocketId });
+  showMatchmakingScreen('challenging', targetName);
 }
 
 function cancelMatchmaking() {
@@ -1715,7 +1739,8 @@ function initSocket() {
   });
 
   socket.on('lobby:openRooms', ({ rooms }) => {
-    renderOpenRooms(rooms);
+    _allOpenRooms = rooms || [];
+    if (_joinListOpen) renderPublicRoomList();
   });
 
   socket.on('room:inviteReceived', ({ code, inviterName, maxPlayers, format, role }) => {
@@ -1755,14 +1780,7 @@ function initSocket() {
   socket.on('room:created', ({ code, maxPlayers }) => {
     G.roomCode = code; G.isHost = true;
     G.players = [{ socketId: socket.id, name: G.myName, score: 0 }];
-    // If this room was created to invite a specific player, send them an invite
-    if (G._pendingInviteTarget) {
-      socket.emit('room:invite', { targetSocketId: G._pendingInviteTarget.socketId, code });
-      showWaitingRoom(code, maxPlayers, true);
-      G._pendingInviteTarget = null;
-    } else {
-      showWaitingRoom(code, maxPlayers, true);
-    }
+    showWaitingRoom(code, maxPlayers, true);
   });
 
   socket.on('room:playerJoined', ({ players, maxPlayers, canStart, format, role }) => {
@@ -1794,16 +1812,18 @@ function initSocket() {
     const el = document.getElementById('fill-countdown-secs');
     if (el) {
       el.textContent = secondsLeft;
-      el.style.color = secondsLeft <= 10 ? 'var(--red)' : secondsLeft <= 30 ? 'var(--gold)' : 'var(--gold)';
+      el.style.color = secondsLeft <= 10 ? 'var(--red)' : 'var(--gold)';
       if (secondsLeft <= 10 && secondsLeft > 0) SFX.play('timer');
     }
     const wrap = document.getElementById('fill-countdown-wrap');
     if (wrap) wrap.classList.remove('hidden');
-    // Update start button text too
+    // Show KEEP WAITING button for host when countdown starts
     if (G.isHost) {
-      const btn = document.getElementById('start-game-btn');
-      if (btn && !btn.disabled === false) {
-        btn.textContent = `START NOW (${playersNow}/${maxPlayers}) — or wait ${secondsLeft}s`;
+      const keepBtn = document.getElementById('keep-waiting-btn');
+      if (keepBtn) keepBtn.classList.remove('hidden');
+      const startBtn = document.getElementById('start-game-btn');
+      if (startBtn && playersNow >= 2) {
+        startBtn.textContent = `▶ START NOW (${playersNow}/${maxPlayers})`;
       }
     }
   });
@@ -1820,6 +1840,15 @@ function initSocket() {
   // Room dissolved — not enough players ever joined
   socket.on('room:dissolved', ({ reason }) => {
     returnToOnlineLobby(reason || 'Room closed — not enough players.');
+  });
+  // Host dismissed auto-start — waiting indefinitely
+  socket.on('room:waitingIndefinitely', () => {
+    document.getElementById('fill-countdown-wrap')?.classList.add('hidden');
+    document.getElementById('keep-waiting-btn')?.classList.add('hidden');
+    const notice = document.getElementById('fill-timeout-notice');
+    const msg    = document.getElementById('fill-timeout-msg');
+    if (notice) notice.classList.remove('hidden');
+    if (msg)    msg.textContent = 'Host is waiting for more players — no time limit!';
   });
   socket.on('matchmaking:waiting',   () => showWaitingRoom(null, 2, false));
   socket.on('matchmaking:cancelled', () => showLobby());
@@ -2222,7 +2251,7 @@ function initLoadingScreen() {
 // LOBBY TABS
 // ═══════════════════════════════════════════════════════════════════
 function switchLobbyTab(tab) {
-  ['players','rooms','code'].forEach(t => {
+  ['players','rooms'].forEach(t => {
     const tabEl    = document.getElementById(`lobby-tab-${t}`);
     const btnEl    = document.getElementById(`tab-${t}`);
     const isActive = t === tab;
@@ -2236,17 +2265,61 @@ function switchLobbyTab(tab) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// OPEN ROOMS
+// ROOMS TAB — PUBLIC ROOMS
 // ═══════════════════════════════════════════════════════════════════
-function renderOpenRooms(rooms) {
-  const list = document.getElementById('open-rooms-list');
+
+// All open rooms received from server (filtered to exclude own room by server)
+let _allOpenRooms = [];
+// Currently selected public room size filter
+let _pubRoomSize  = 2;
+// Whether JOIN list is visible
+let _joinListOpen = false;
+
+function setPublicRoomSize(n) {
+  _pubRoomSize = n;
+  [2,3,4,5].forEach(i => {
+    const el = document.getElementById(`pub-cnt-${i}`);
+    if (el) el.className = 'count-btn' + (i===n?' active':'');
+  });
+  if (_joinListOpen) renderPublicRoomList();
+}
+
+function hostPublicRoom() {
+  if (!socket) return;
+  const n = G.myName;
+  if (!n) { setLobbyError('Enter your name first.'); switchLobbyTab('players'); return; }
+  _joinListOpen = false;
+  document.getElementById('public-rooms-list').classList.add('hidden');
+  socket.emit('room:create', {
+    playerName: n,
+    maxPlayers: _pubRoomSize,
+    format: G.selectedFormat || 'ODI',
+    role: G.selectedRole || null,
+    isPublic: true,
+  });
+}
+
+function joinPublicRoom() {
+  _joinListOpen = !_joinListOpen;
+  const list = document.getElementById('public-rooms-list');
+  if (_joinListOpen) {
+    list.classList.remove('hidden');
+    renderPublicRoomList();
+  } else {
+    list.classList.add('hidden');
+  }
+}
+
+function renderPublicRoomList() {
+  const list = document.getElementById('public-rooms-list');
   if (!list) return;
-  if (!rooms || rooms.length === 0) {
-    list.innerHTML = `<div style="text-align:center;color:var(--gray);font-size:13px;padding:16px 0;">No open rooms.<br><span style="font-size:11px;opacity:.6;">Host one or challenge a player!</span></div>`;
+  const filtered = _allOpenRooms.filter(r => r.maxPlayers === _pubRoomSize);
+  if (filtered.length === 0) {
+    list.innerHTML = `<div style="text-align:center;color:var(--gray);font-size:13px;padding:12px 0;">No ${_pubRoomSize}-player public rooms.<br><span style="font-size:11px;opacity:.6;">Host one to start!</span></div>`;
     return;
   }
   const fmtColor = { ODI:'var(--gold)', T20I:'var(--blue)', TEST:'var(--green-win)', IPL:'#c050ff' };
-  list.innerHTML = rooms.map(r => {
+  list.innerHTML = filtered.map(r => {
     const fmt   = r.format || 'ODI';
     const role  = r.role ? ` • ${r.role.toUpperCase()}` : '';
     const slots = `${r.currentPlayers}/${r.maxPlayers}`;
@@ -2271,24 +2344,47 @@ function joinOpenRoom(code) {
   socket.emit('room:join', { playerName: n, code });
 }
 
-function setLobbyPlayerCount(n) {
-  G.selectedPlayerCount = n;
+// Private room modal
+let _privateRoomSize = 2;
+function showHostPrivateModal() {
+  _privateRoomSize = 2;
+  setPrivateRoomSize(2);
+  document.getElementById('host-private-modal').classList.remove('hidden');
+}
+function setPrivateRoomSize(n) {
+  _privateRoomSize = n;
   [2,3,4,5].forEach(i => {
-    const el = document.getElementById(`lobby-cnt-${i}`);
+    const el = document.getElementById(`priv-cnt-${i}`);
     if (el) el.className = 'count-btn' + (i===n?' active':'');
   });
 }
-
-function hostOpenRoom() {
+function confirmHostPrivateRoom() {
+  document.getElementById('host-private-modal').classList.add('hidden');
   if (!socket) return;
   const n = G.myName;
-  if (!n) { setLobbyError('Enter your name first.'); switchLobbyTab('players'); return; }
+  if (!n) { setLobbyError('Enter your name first.'); return; }
   socket.emit('room:create', {
     playerName: n,
-    maxPlayers: G.selectedPlayerCount || 2,
+    maxPlayers: _privateRoomSize,
     format: G.selectedFormat || 'ODI',
     role: G.selectedRole || null,
+    isPublic: false,
   });
+}
+
+function joinRoomByCode2() {
+  const c = document.getElementById('room-code-input-2')?.value?.trim().toUpperCase();
+  if (c?.length !== 4) { setLobbyError('Enter a 4-character room code.'); return; }
+  const n = G.myName; if (!n) return;
+  socket.emit('room:join', { playerName: n, code: c });
+}
+
+// Keep waiting (host dismisses auto-start countdown)
+function hostKeepWaiting() {
+  if (!socket) return;
+  socket.emit('room:keepWaiting');
+  document.getElementById('keep-waiting-btn').classList.add('hidden');
+  document.getElementById('fill-countdown-wrap').classList.add('hidden');
 }
 
 // ═══════════════════════════════════════════════════════════════════
