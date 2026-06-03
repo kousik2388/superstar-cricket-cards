@@ -435,7 +435,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <button class="btn-green" onclick="showFormatSelect()">▶ PLAY VS AI</button>
       <div class="menu-label" style="margin-top:4px;">🌐 MULTIPLAYER</div>
       <button class="btn-primary" onclick="showFormatSelectOnline()">▶ PLAY ONLINE</button>
-      <button class="btn-secondary" style="background:rgba(0,160,200,.15);border-color:var(--blue);color:var(--blue);" onclick="showPage('page-spectate');initSocket();">👁 SPECTATE</button>
       <div style="display:flex;gap:8px;width:100%;max-width:300px;">
         <button class="btn-secondary" style="flex:1;" onclick="showCollection()">🎴 COLLECTION</button>
         <button class="btn-secondary" style="flex:1;" onclick="showLeaderboard()">🏆 HISTORY</button>
@@ -638,32 +637,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 </div>
 
 <!-- SPECTATE PAGE -->
-<div id="page-spectate" class="page hidden" style="padding:20px 16px;max-width:480px;margin:0 auto;">
-  <div class="page-header" style="border:none;padding:0;margin-bottom:16px;">👁 SPECTATE</div>
-  <div style="font-size:13px;color:var(--gray);margin-bottom:16px;">Watch a live match by entering the room code.</div>
-  <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
-    <input id="spectate-name-input" placeholder="Your name" maxlength="20"
-      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;
-      padding:12px 16px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;
-      letter-spacing:1px;width:100%;box-sizing:border-box;">
-    <input id="spectate-code-input" placeholder="Room code (4 letters)" maxlength="4"
-      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;
-      padding:12px 16px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:18px;
-      letter-spacing:6px;text-transform:uppercase;width:100%;box-sizing:border-box;text-align:center;">
-    <button class="btn-primary" onclick="joinAsSpectator()">👁 WATCH LIVE</button>
-    <div id="spectate-error" style="font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
-    <button class="btn-secondary" onclick="showLanding()">← BACK</button>
-  </div>
-  <!-- Spectate live view -->
-  <div id="spectate-live" class="hidden" style="margin-top:20px;">
-    <div style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:3px;color:var(--gray);text-align:center;margin-bottom:12px;">👁 WATCHING LIVE</div>
-    <div id="spectate-scoreboard" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:12px;"></div>
-    <div id="spectate-status" style="font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:2px;color:var(--gold);text-align:center;padding:10px;background:rgba(240,192,64,.08);border-radius:6px;margin-bottom:10px;">WAITING…</div>
-    <div style="font-size:11px;color:var(--gray);text-align:center;">Round <span id="spectate-round">-</span> / 10</div>
-    <button class="btn-danger" style="max-width:200px;margin:20px auto 0;display:block;" onclick="leaveSpectate()">LEAVE</button>
-  </div>
-</div>
-
 <!-- LOBBY -->
 <div id="page-lobby" class="page hidden">
   <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:20px 16px;gap:12px;width:100%;max-width:400px;margin:0 auto;">
@@ -995,6 +968,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div class="next-picker-note hidden" id="next-picker-note"></div>
     <button class="btn-next" id="result-next-btn">NEXT ROUND ▶</button>
     <div class="waiting-next hidden" id="waiting-next-msg">⏳ Waiting for other players…</div>
+    <div id="auto-next-wrap" class="hidden" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;color:var(--gray);text-align:center;margin-top:2px;">NEXT ROUND IN <span id="auto-next-secs" style="color:var(--gold);"></span>s</div>
   </div>
 </div>
 
@@ -1126,6 +1100,7 @@ const G = {
   pickerIndex: 0,
   chosenStat: null,
   ackedNext: false,
+  _autoNextTimer: null,
   confirmedOnline: false,
   inGame: false,
   arranging: false,
@@ -1671,6 +1646,8 @@ function applyRoundStart({ round, yourCard, pickerIndex, pickerName, scores, tot
   G.oppCards    = {};
   if (scores) G.players.forEach(p => { if (scores[p.socketId] !== undefined) p.score = scores[p.socketId]; });
   document.getElementById('result-overlay').classList.add('hidden');
+  document.getElementById('auto-next-wrap')?.classList.add('hidden');
+  if (G._autoNextTimer) { clearInterval(G._autoNextTimer); G._autoNextTimer = null; }
   showPage('page-match');
   renderOnlineRound();
 }
@@ -1928,8 +1905,40 @@ function initSocket() {
     showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName, nextPickerIndex, ranked, allCards, mode:'online' });
   });
 
+  // Server countdown: auto-advance if player hasn't pressed NEXT ROUND
+  socket.on('round:nextCountdown', ({ seconds }) => {
+    if (G.ackedNext) return; // already pressed, don't show
+    const wrap = document.getElementById('auto-next-wrap');
+    const secsEl = document.getElementById('auto-next-secs');
+    if (!wrap || !secsEl) return;
+    wrap.classList.remove('hidden');
+    secsEl.textContent = seconds;
+    if (G._autoNextTimer) clearInterval(G._autoNextTimer);
+    let remaining = seconds;
+    G._autoNextTimer = setInterval(() => {
+      remaining--;
+      if (G.ackedNext || remaining <= 0) {
+        clearInterval(G._autoNextTimer);
+        G._autoNextTimer = null;
+        wrap.classList.add('hidden');
+        // Auto-fire round:next if player still hasn't pressed
+        if (!G.ackedNext && G.mode === 'online') {
+          G.ackedNext = true;
+          document.getElementById('result-next-btn')?.classList.add('hidden');
+          document.getElementById('waiting-next-msg')?.classList.remove('hidden');
+          socket.emit('round:next');
+        }
+        return;
+      }
+      secsEl.textContent = remaining;
+      if (remaining <= 5) secsEl.style.color = 'var(--red)';
+    }, 1000);
+  });
+
   socket.on('game:over', ({ reason, scores, finalRanking, yourIndex }) => {
     G.inGame = false;
+    if (G._autoNextTimer) { clearInterval(G._autoNextTimer); G._autoNextTimer = null; }
+    document.getElementById('auto-next-wrap')?.classList.add('hidden');
     if (reason==='disconnect') return;
     G.players.forEach(p => { if (scores[p.socketId]!==undefined) p.score=scores[p.socketId]; });
     showFinalResult(finalRanking, yourIndex);
@@ -2020,12 +2029,6 @@ function initSocket() {
 
   // Rematch timed out — opponent didn't respond in 30 seconds
   // ── SPECTATE UPDATES ──
-  socket.on('spectate:roundUpdate', updateSpectateView);
-  socket.on('spectate:joined', ({ name }) => {
-    // Show notification that spectator joined (optional)
-    console.log(`[spectate] ${name} is watching`);
-  });
-
   socket.on('game:rematchTimeout', () => {
     clearPlayAgainTimer();
     document.getElementById('rematch-timeout-notice')?.classList.remove('hidden');
@@ -3043,6 +3046,9 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   waitMsg.classList.add('hidden');
   nextBtn.classList.remove('hidden');
   G.ackedNext = false;
+  // Reset auto-next countdown display
+  document.getElementById('auto-next-wrap')?.classList.add('hidden');
+  if (G._autoNextTimer) { clearInterval(G._autoNextTimer); G._autoNextTimer = null; }
 
   // Result label
   if (iWon && !isDraw)    { label.textContent='ROUND WON! 🎉'; label.className='result-label win'; }
@@ -3205,6 +3211,8 @@ function handleNextRound() {
   }
   if (G.ackedNext) return;
   G.ackedNext = true;
+  if (G._autoNextTimer) { clearInterval(G._autoNextTimer); G._autoNextTimer = null; }
+  document.getElementById('auto-next-wrap')?.classList.add('hidden');
   document.getElementById('result-next-btn').classList.add('hidden');
   document.getElementById('waiting-next-msg').classList.remove('hidden');
   socket.emit('round:next');
@@ -5118,73 +5126,6 @@ function showLeaderboard() {
 }
 
 
-
-// ═══════════════════════════════════════════════════════════════════
-// SPECTATE
-// ═══════════════════════════════════════════════════════════════════
-function joinAsSpectator() {
-  const name = document.getElementById('spectate-name-input').value.trim() || 'Spectator';
-  const code = document.getElementById('spectate-code-input').value.trim().toUpperCase();
-  const errEl = document.getElementById('spectate-error');
-  if (code.length !== 4) { errEl.textContent = 'Enter a 4-letter room code.'; return; }
-  errEl.textContent = '';
-  if (!socket) initSocket();
-  socket.emit('spectate:join', { spectatorName: name, code });
-  socket.once('spectate:state', (state) => {
-    document.getElementById('spectate-live').classList.remove('hidden');
-    updateSpectateView(state);
-  });
-  socket.once('room:error', ({ message }) => {
-    errEl.textContent = message;
-  });
-}
-
-function updateSpectateView(state) {
-  // Scoreboard
-  const sb = document.getElementById('spectate-scoreboard');
-  if (sb) {
-    sb.innerHTML = state.players.map(p =>
-      `<div style="background:rgba(255,255,255,.06);border-radius:6px;padding:8px 14px;text-align:center;">
-        <div style="font-family:'Bebas Neue',cursive;font-size:18px;color:var(--gold);">${p.score}</div>
-        <div style="font-size:10px;color:var(--gray);">${p.name}</div>
-      </div>`
-    ).join('');
-  }
-  const status = document.getElementById('spectate-status');
-  const picker = state.players[state.pickerIndex];
-  if (status) {
-    if (state.roundPhase === 'pick') status.textContent = `${picker?.name || '?'} IS PICKING A STAT…`;
-    else if (state.roundPhase === 'confirm') status.textContent = `STAT: ${statLabel(state.roundStat)} — WAITING FOR CONFIRM`;
-    else status.textContent = 'ROUND RESULT…';
-  }
-  const roundEl = document.getElementById('spectate-round');
-  if (roundEl) roundEl.textContent = (state.round + 1);
-}
-
-function leaveSpectate() {
-  if (socket) socket.emit('spectate:leave');
-  document.getElementById('spectate-live').classList.add('hidden');
-  showLanding();
-}
-
-// ── Wire spectate updates ──
-// Fix #12: removed duplicate game:over listener; spectate UI update is handled
-// inside updateSpectateView which checks for isLastRound flag
-function wireSpectateListeners() {
-  if (!socket) return;
-  socket.on('spectate:roundUpdate', updateSpectateView);
-  // game:over for spectators: update status text without re-registering the main handler
-  if (!socket._spectateOverBound) {
-    socket._spectateOverBound = true;
-    socket.on('game:over', () => {
-      const el = document.getElementById('spectate-status');
-      if (el && document.getElementById('page-spectate') &&
-          !document.getElementById('page-spectate').classList.contains('hidden')) {
-        el.textContent = 'MATCH OVER';
-      }
-    });
-  }
-}
 
 // Boot — show loading screen, landing appears after tap
 computeDeckAverages();
