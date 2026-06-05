@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUPERSTAR CRICKET CARDS — Multiplayer Server v5 / V40 bugfix base
+// SUPERSTAR CRICKET CARDS — Multiplayer Server v6 / V45 audio build
 // Supports 2-5 players, batting/bowling phase split, podium points
 // ═══════════════════════════════════════════════════════════════════════════════
 const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
 const path       = require('path');
+const fs         = require('fs');
 
 const app    = express();
 const server = http.createServer(app);
@@ -18,6 +19,7 @@ const io     = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 // ── UPTIME / HEALTH ENDPOINTS ──────────────────────────────────────
 // UptimeRobot pings /ping every 5 minutes to keep Render free tier awake
@@ -26,7 +28,11 @@ app.get('/ping', (req, res) => {
 });
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => {
+  const publicIndex = path.join(__dirname, 'public', 'index.html');
+  const rootIndex = path.join(__dirname, 'index.html');
+  res.sendFile(fs.existsSync(publicIndex) ? publicIndex : rootIndex);
+});
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const TOTAL_ROUNDS     = 10;
