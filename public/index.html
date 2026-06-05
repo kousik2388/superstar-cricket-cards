@@ -2089,14 +2089,8 @@ function initSocket() {
     showLobby();
   });
 
-  socket.on('game:opponentWantsRematch', ({ name, readyCount, totalCount } = {}) => {
-    const notice = document.getElementById('rematch-notice');
-    if (notice) {
-      notice.classList.remove('hidden');
-      notice.textContent = totalCount > 2
-        ? `⏳ ${name || 'Player'} wants a rematch! (${readyCount}/${totalCount} ready)`
-        : '⏳ Opponent wants a rematch!';
-    }
+  socket.on('game:opponentWantsRematch', () => {
+    // No longer used — play again returns both players to lobby
   });
 
   // Server auto-resolved confirm because non-picker didn't tap in time
@@ -2138,10 +2132,9 @@ function initSocket() {
   // ── SPECTATE UPDATES ──
   socket.on('game:rematchTimeout', () => {
     clearPlayAgainTimer();
-    document.getElementById('rematch-timeout-notice')?.classList.remove('hidden');
-    document.getElementById('play-again-countdown-wrap')?.classList.add('hidden');
+    // No longer used — play again goes to lobby directly
     const btn = document.getElementById('btn-play-again');
-    if (btn) { btn.textContent = '🔄 PLAY AGAIN'; btn.disabled = false; }
+    if (btn) { btn.textContent = '⚔ PLAY AGAIN'; btn.disabled = false; }
     // Auto-return to menu after 3 seconds
     setTimeout(() => {
       if (G.mode === 'online') returnToOnlineLobby('Rematch timed out.');
@@ -3432,7 +3425,7 @@ function showFinalResult(finalRanking, myIndex) {
 
   document.getElementById('rematch-notice').classList.add('hidden');
   const btn = document.getElementById('btn-play-again');
-  btn.textContent = '🔄 PLAY AGAIN';
+  btn.textContent = '⚔ PLAY AGAIN';
   btn.disabled    = false;
   btn.onclick     = playAgain;
 
@@ -3459,15 +3452,31 @@ function showFinalResult(finalRanking, myIndex) {
 }
 
 function playAgain() {
-  if (G.mode==='ai') startAIGame();
-  else {
-    socket.emit('game:playAgain');
-    const btn = document.getElementById('btn-play-again');
-    btn.textContent = '⏳ WAITING…';
-    btn.disabled = true;
-    document.getElementById('rematch-timeout-notice')?.classList.add('hidden');
-    startPlayAgainCountdown();
+  if (G.mode === 'ai') {
+    startAIGame();
+    return;
   }
+  // Online: go straight back to lobby with same name & format so they
+  // can immediately re-challenge the opponent — no waiting required.
+  clearPlayAgainTimer();
+  // Keep G.myName, G.selectedFormat, G.selectedRole set from last game
+  G.inGame = false;
+  // Re-enter the lobby (socket already connected)
+  const n = G.myName || '';
+  if (n) {
+    // Skip the name entry step, go straight to player list
+    socket.emit('lobby:enter', {
+      playerName: n,
+      format: G.selectedFormat || 'ODI',
+      role:   G.selectedRole   || null,
+    });
+    document.getElementById('lobby-name-section')?.classList.add('hidden');
+    document.getElementById('lobby-players-section')?.classList.remove('hidden');
+    // Pre-fill the name input so it's ready if they want to change it
+    const nameInput = document.getElementById('lobby-name-input');
+    if (nameInput) nameInput.value = n;
+  }
+  showPage('page-lobby');
 }
 
 function startPlayAgainCountdown() {
