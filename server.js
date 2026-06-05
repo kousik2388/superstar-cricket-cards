@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUPERSTAR CRICKET CARDS — Multiplayer Server v4
+// SUPERSTAR CRICKET CARDS — Multiplayer Server v5 / V40 bugfix base
 // Supports 2-5 players, batting/bowling phase split, podium points
 // ═══════════════════════════════════════════════════════════════════════════════
 const express    = require('express');
@@ -72,6 +72,17 @@ function shuffle(arr) {
   return a;
 }
 
+
+function uniqueCardsById(cards) {
+  const seen = new Set();
+  return (cards || []).filter(c => {
+    const key = c && (c.id || c.name);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // ── COMPARISON ────────────────────────────────────────────────────────────────
 const STAT_META = {
   matches:{lowerBetter:false}, runs:{lowerBetter:false}, fours:{lowerBetter:false},
@@ -123,6 +134,7 @@ function createRoom(code, maxPlayers=2, format='ODI') {
     playAgainAcks: new Set(),
     arrangeAcks: new Set(),
     tossReadyAcks: new Set(),
+    tossReadyTimer: null,
     started: false,
     finished: false,
     pickTimer: null,
@@ -210,15 +222,19 @@ function startGame(room) {
 
   const fullDeck = getDeckForFormat(room.format || 'ODI');
   const squad    = getSquadByRole(fullDeck, room.role);
-  // Need at least 10 cards per player; fall back if squad too small
-  let pool = squad.length >= room.maxPlayers * 10 ? squad : fullDeck;
-  // Safety: if even fullDeck is too small (shouldn't happen), pad by repeating
-  if (pool.length < room.maxPlayers * 10) {
-    const padded = [];
-    while (padded.length < room.maxPlayers * 10) padded.push(...pool);
-    pool = padded;
+  // V40: deal from unique cards first using actual joined players, not maxPlayers.
+  // This prevents repeated cards across players/rounds when a role filter is small.
+  const cardsNeeded = room.players.length * 10;
+  let pool = uniqueCardsById(squad);
+  if (pool.length < cardsNeeded) pool = uniqueCardsById(fullDeck);
+
+  let deck = shuffle(pool);
+  // Safety fallback: if a custom deck is ever too small, only then allow repeats.
+  if (deck.length < cardsNeeded) {
+    const fallback = shuffle(uniqueCardsById(fullDeck));
+    while (deck.length < cardsNeeded) deck = deck.concat(fallback);
   }
-  const deck     = shuffle(pool);
+
   room.players.forEach((p, i) => {
     room.hands[p.socketId] = deck.slice(i * 10, (i+1) * 10);
   });
@@ -239,6 +255,8 @@ function startGame(room) {
       format:       room.format,
       role:         room.role || null,
       maxPlayers:   room.maxPlayers,
+      pickerIndex:  room.pickerIndex,
+      pickerName:   room.players[room.pickerIndex]?.name || 'Player',
     });
   });
 
@@ -261,6 +279,8 @@ function emitRound(room) {
   room.roundPhase  = 'pick';
   room.nextAcks    = new Set();  // fix #8: reset before each round so early acks don't skip rounds
   if (room.nextTimer) { clearTimeout(room.nextTimer); room.nextTimer = null; }
+  if (room.tossReadyTimer) { clearTimeout(room.tossReadyTimer); room.tossReadyTimer = null; }
+  if (room.tossReadyTimer) { clearTimeout(room.tossReadyTimer); room.tossReadyTimer = null; }
   room.confirmAcks = new Set();
 
   // Clear any previous pick timer
@@ -388,6 +408,7 @@ function endGame(room, reason='normal') {
   if (room.playAgainTimer) { clearTimeout(room.playAgainTimer); room.playAgainTimer = null; }
   if (room.fillTimer) { clearTimeout(room.fillTimer); room.fillTimer = null; }
   if (room.nextTimer) { clearTimeout(room.nextTimer); room.nextTimer = null; }
+  if (room.tossReadyTimer) { clearTimeout(room.tossReadyTimer); room.tossReadyTimer = null; }
 
   const sorted  = [...room.players].sort((a,b) => b.score - a.score);
   const scores  = Object.fromEntries(room.players.map(p => [p.socketId, p.score]));
@@ -519,6 +540,7 @@ io.on('connection', socket => {
     io.to(challengerSocketId).emit('challenge:accepted', { opponentName: p2name, code, agreedFormat: format, agreedRole: role });
     io.to(socket.id).emit('challenge:accepted',          { opponentName: p1name, code, agreedFormat: format, agreedRole: role });
 
+    // V40: start immediately from the accepted challenge room.
     startGame(room);
   });
 
@@ -682,11 +704,22 @@ io.on('connection', socket => {
     const code = socketToRoom[socket.id];
     if (!code) return;
     const room = rooms[code];
-    if (!room || !room.started) return;
+    if (!room || !room.started || room.finished) return;
+
     room.tossReadyAcks.add(socket.id);
-    if (room.tossReadyAcks.size >= room.players.length) {
+
+    const startArrangeForRoom = () => {
+      if (!room || room.finished || !room.started) return;
+      if (room.tossReadyTimer) { clearTimeout(room.tossReadyTimer); room.tossReadyTimer = null; }
       room.tossReadyAcks = new Set();
       room.players.forEach(p => io.to(p.socketId).emit('arrange:start'));
+    };
+
+    if (room.tossReadyAcks.size >= room.players.length) {
+      startArrangeForRoom();
+    } else if (!room.tossReadyTimer) {
+      // V40 safeguard: if a client misses the ready click/event, do not leave both players stuck.
+      room.tossReadyTimer = setTimeout(startArrangeForRoom, 8000);
     }
   });
 
