@@ -2572,4 +2572,3 @@ const T20I_CARDS = [
   { id:"rahmanullah_gurbaz_t20i", name:"Rahmanullah Gurbaz", country:"Afghanistan", role:"Wicket-keeper", rarity:"Rare", avatarUrl:null, matches:62, runs:1720, fours:157, sixes:70, fifties:10, hundreds:1, highestScore:118, strikeRate:153.44, bestBowlingWickets:0, bestBowlingRuns:0, economyRate:0, wickets:0, catches:44, stumpings:10 },
   { id:"sikandar_raza_t20i2", name:"Sikandar Raza", country:"Zimbabwe", role:"All-rounder", rarity:"Rare", avatarUrl:null, matches:85, runs:1956, fours:166, sixes:57, fifties:13, hundreds:0, highestScore:82, strikeRate:128.58, bestBowlingWickets:5, bestBowlingRuns:11, economyRate:7.11, wickets:69, catches:29, stumpings:0 },
 ];
-
