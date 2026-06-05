@@ -226,7 +226,7 @@ function startGame(room) {
   room.arrangeAcks    = new Set();  // reset arrange acks for new game
   room.tossReadyAcks  = new Set();  // reset toss ready acks for new game
 
-  // Randomise who picks first (toss)
+  // Randomise picker (toss) and broadcast immediately so client coin toss resolves
   room.pickerIndex = Math.floor(Math.random() * room.players.length);
 
   room.players.forEach((p, i) => {
@@ -242,8 +242,8 @@ function startGame(room) {
     });
   });
 
-  // Send toss result immediately so clients can show the coin toss outcome
-  // without waiting for round:start (which only fires after arrange is done)
+  // Send toss result immediately so coin toss screen can resolve
+  // without waiting for round:start (which only fires post-arrange)
   const tossPicker = room.players[room.pickerIndex];
   io.to(room.code).emit('game:tossResult', {
     pickerIndex: room.pickerIndex,
@@ -493,9 +493,7 @@ io.on('connection', socket => {
     if (!challenge || challenge.targetSocketId !== socket.id) return;
     delete pendingChallenges[challengerSocketId];
 
-    // Always use challenger's registered format/role as source of truth.
-    // The accepter may not have selected a role (sitting in lobby), so
-    // agreedRole from the accepter's client can be null even if challenger picked 'batter'.
+    // Always use challenger's registered format/role as source of truth
     const challengerData = onlinePlayers[challengerSocketId] || {};
     const format = agreedFormat || challengerData.format || 'ODI';
     const role   = agreedRole   || challengerData.role   || null;
@@ -1031,7 +1029,7 @@ const ODI_CARDS = [
   { id:"richard_hadlee_odi", name:"Richard Hadlee", country:"New Zealand", role:"All-rounder", rarity:"Legendary", matches:115, runs:1751, fours:157, sixes:32, fifties:8, hundreds:0, highestScore:79, strikeRate:79.27, bestBowlingWickets:5, bestBowlingRuns:25, economyRate:3.90, wickets:158, catches:22, stumpings:0 },
   { id:"waqar_younis_odi2", name:"Waqar Younis", country:"Pakistan", role:"Bowler", rarity:"Epic", matches:262, runs:1010, fours:73, sixes:22, fifties:0, hundreds:0, highestScore:37, strikeRate:70.00, bestBowlingWickets:7, bestBowlingRuns:36, economyRate:4.68, wickets:416, catches:39, stumpings:0 },
   { id:"shaun_pollock_odi2", name:"Shaun Pollock", country:"South Africa", role:"All-rounder", rarity:"Epic", matches:303, runs:3519, fours:273, sixes:15, fifties:14, hundreds:0, highestScore:130, strikeRate:70.63, bestBowlingWickets:6, bestBowlingRuns:35, economyRate:3.67, wickets:393, catches:112, stumpings:0 },
-  { id:"peter_ingram_odi", name:"Jacob Oram", country:"New Zealand", role:"All-rounder", rarity:"Rare", matches:160, runs:3676, fours:313, sixes:74, fifties:20, hundreds:1, highestScore:101, strikeRate:75.61, bestBowlingWickets:5, bestBowlingRuns:26, economyRate:4.77, wickets:147, catches:52, stumpings:0 },
+  { id:"jacob_oram_odi", name:"Jacob Oram", country:"New Zealand", role:"All-rounder", rarity:"Rare", matches:160, runs:3676, fours:313, sixes:74, fifties:20, hundreds:1, highestScore:101, strikeRate:75.61, bestBowlingWickets:5, bestBowlingRuns:26, economyRate:4.77, wickets:147, catches:52, stumpings:0 },
   { id:"kieron_pollard_odi", name:"Kieron Pollard", country:"West Indies", role:"All-rounder", rarity:"Epic", matches:101, runs:1896, fours:130, sixes:117, fifties:8, hundreds:0, highestScore:119, strikeRate:91.58, bestBowlingWickets:4, bestBowlingRuns:39, economyRate:5.78, wickets:56, catches:36, stumpings:0 },
 ];
 
