@@ -234,7 +234,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .rarity-badge.rarity-rare{background:rgba(126,200,227,.2);color:var(--rr);border:1px solid var(--rr)}
 .rarity-badge.rarity-epic{background:rgba(192,112,240,.2);color:var(--re);border:1px solid var(--re)}
 .rarity-badge.rarity-legendary{background:rgba(240,192,64,.2);color:var(--rl);border:1px solid var(--rl)}
-.card-avatar{height:140px;background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
+.card-avatar{height:var(--card-w);background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
   display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .card-avatar::before{content:'';position:absolute;inset:0;
   background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,.015) 6px,rgba(255,255,255,.015) 12px)}
@@ -3039,7 +3039,7 @@ function buildCard(card, { clickable=false, selected=null, blink=null, result=nu
     </div>
     <div class="card-avatar">
       ${card.avatarUrl
-        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" loading="lazy" onerror="avatarFallback(this)">`
+        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}" style="width:100%;height:100%;object-fit:contain;background:#0d1f14;" loading="lazy" onerror="avatarFallback(this)">`
         : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`
       }
     </div>
@@ -3061,7 +3061,7 @@ function buildResultCard(card, { rankClass='', statKey=null, isMe=false } = {}) 
   const val      = sc ? displayVal(card, statKey) : '—';
   const avatarHtml = card.avatarUrl
     ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}"
-         style="width:100%;height:100%;object-fit:cover;object-position:top center;"
+         style="width:100%;height:100%;object-fit:contain;background:#0d1f14;"
          loading="lazy" onerror="avatarFallback(this)">`
     : `<div class="player-silhouette">🏏</div><div class="player-initials">${initials}</div>`;
 
