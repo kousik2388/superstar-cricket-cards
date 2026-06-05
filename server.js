@@ -226,6 +226,9 @@ function startGame(room) {
   room.arrangeAcks    = new Set();  // reset arrange acks for new game
   room.tossReadyAcks  = new Set();  // reset toss ready acks for new game
 
+  // Randomise who picks first (toss)
+  room.pickerIndex = Math.floor(Math.random() * room.players.length);
+
   room.players.forEach((p, i) => {
     io.to(p.socketId).emit('game:start', {
       yourHand:     room.hands[p.socketId],
@@ -237,6 +240,14 @@ function startGame(room) {
       role:         room.role || null,
       maxPlayers:   room.maxPlayers,
     });
+  });
+
+  // Send toss result immediately so clients can show the coin toss outcome
+  // without waiting for round:start (which only fires after arrange is done)
+  const tossPicker = room.players[room.pickerIndex];
+  io.to(room.code).emit('game:tossResult', {
+    pickerIndex: room.pickerIndex,
+    pickerName:  tossPicker?.name || 'Player',
   });
 
   // Mark all players as in-game so they appear correctly in the lobby
@@ -482,8 +493,12 @@ io.on('connection', socket => {
     if (!challenge || challenge.targetSocketId !== socket.id) return;
     delete pendingChallenges[challengerSocketId];
 
-    const format = agreedFormat || onlinePlayers[challengerSocketId]?.format || 'ODI';
-    const role   = agreedRole   || null;
+    // Always use challenger's registered format/role as source of truth.
+    // The accepter may not have selected a role (sitting in lobby), so
+    // agreedRole from the accepter's client can be null even if challenger picked 'batter'.
+    const challengerData = onlinePlayers[challengerSocketId] || {};
+    const format = agreedFormat || challengerData.format || 'ODI';
+    const role   = agreedRole   || challengerData.role   || null;
 
     const code = generateRoomCode();
     const room = createRoom(code, 2, format);
