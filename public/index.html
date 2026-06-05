@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V42</title>
+<title>Superstar Cricket Cards — V45</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -496,7 +496,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#a0c0e0;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V42</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V45</div>
   </div>
 </div>
 
@@ -1221,6 +1221,8 @@ const G = {
 
 // ── FORCE RETURN TO MENU ─────────────────────────────────────────
 function forceReturnToMenu() {
+  SFX.stopEvents();
+  SFX.playMusic('main_menu');
   G.inGame = false;
   if (G._dcCountdownTimer) { clearInterval(G._dcCountdownTimer); G._dcCountdownTimer = null; }
   clearPickTimer();
@@ -1239,68 +1241,187 @@ function forceReturnToMenu() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SOUND ENGINE (Web Audio API — no external files needed)
+// SOUND ENGINE (File-based audio pack — public/audio)
 // ═══════════════════════════════════════════════════════════════════
 const SFX = (() => {
-  let ctx = null;
+  const MUSIC_VOLUME = 0.16;   // subtle background music
+  const FINAL3_VOLUME = 0.20;
+  const SFX_VOLUME   = 0.72;
+  const SOFT_VOLUME  = 0.45;
+
+  const ASSETS = {
+    main_menu:   '/audio/main_menu_music.mp3',
+    odi_ipl:     '/audio/odi_ipl_music.mp3',
+    test_t20:    '/audio/test_t20_music.mp3',
+    button:      '/audio/notification.mp3',
+    match_made:  '/audio/notification.mp3',
+    notification:'/audio/notification.mp3',
+    card_deal:   '/audio/card_deal.mp3',
+    card_flip:   '/audio/card_flip.mp3',
+    stat_select: '/audio/stat_select.mp3',
+    confirm_stat:'/audio/confirm_stat.mp3',
+    round_result:'/audio/round_result.mp3',
+    round_won:   '/audio/round_won.mp3',
+    round_lost:  '/audio/round_lost.mp3',
+    game_won:    '/audio/game_won.mp3',
+    game_lost:   '/audio/game_lost.mp3',
+    timer_tick:  '/audio/timer_tick.mp3',
+    timer_warning:'/audio/timer_warning.mp3',
+    error:       '/audio/error.mp3',
+  };
+
   let muted = false;
-  function getCtx() {
-    if (!ctx) {
-      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  let currentMusic = null;
+  let currentMusicKey = null;
+  let pendingMusicKey = null;
+  let unlocked = false;
+  const activeEvents = new Map();
+
+  function makeAudio(src, volume, loop=false) {
+    const a = new Audio(src);
+    a.preload = 'auto';
+    a.volume = volume;
+    a.loop = loop;
+    return a;
+  }
+
+  function stopAudio(a) {
+    if (!a) return;
+    try { a.pause(); a.currentTime = 0; } catch(e) {}
+  }
+
+  function stopEvents() {
+    activeEvents.forEach(a => stopAudio(a));
+    activeEvents.clear();
+  }
+
+  function volumeFor(key) {
+    if (key === 'main_menu') return MUSIC_VOLUME;
+    if (key === 'odi_ipl' || key === 'test_t20') return MUSIC_VOLUME;
+    if (key === 'final3') return FINAL3_VOLUME;
+    if (key === 'button' || key === 'stat_select' || key === 'confirm_stat') return SOFT_VOLUME;
+    return SFX_VOLUME;
+  }
+
+  function musicKeyForFormat(format, round) {
+    const f = String(format || G.selectedFormat || 'ODI').toUpperCase();
+    const r = Number.isInteger(round) ? round : (Number.isInteger(G.round) ? G.round : 0);
+    if (G.inGame && r >= Math.max(0, (G.totalRounds || TOTAL_ROUNDS) - 3)) {
+      // No separate last-3-cards file was provided, so use the more serious TEST/T20 track.
+      return 'final3';
     }
-    return ctx;
+    if (f === 'TEST' || f === 'T20' || f === 'T20I') return 'test_t20';
+    // ODI and IPL intentionally share the same music file.
+    return 'odi_ipl';
   }
+
+  function assetForMusic(key) {
+    if (key === 'final3') return ASSETS.test_t20;
+    return ASSETS[key];
+  }
+
+  function playMusic(key, forceRestart=false) {
+    pendingMusicKey = key;
+    if (muted) { stopMusic(false); return; }
+    const src = assetForMusic(key);
+    if (!src) return;
+    if (currentMusic && currentMusicKey === key && !forceRestart) return;
+    stopMusic(false);
+    currentMusicKey = key;
+    currentMusic = makeAudio(src, volumeFor(key), true);
+    if (!unlocked) return;
+    const p = currentMusic.play();
+    if (p && p.catch) p.catch(()=>{});
+  }
+
+  function playGameMusic(format, round) {
+    playMusic(musicKeyForFormat(format, round));
+  }
+
+  function stopMusic(clearPending=true) {
+    stopAudio(currentMusic);
+    currentMusic = null;
+    currentMusicKey = null;
+    if (clearPending) pendingMusicKey = null;
+  }
+
+  function playFile(key, { loop=false, volume=null, restart=true } = {}) {
+    if (muted) return null;
+    const src = ASSETS[key];
+    if (!src) return null;
+    if (restart && activeEvents.has(key)) {
+      stopAudio(activeEvents.get(key));
+      activeEvents.delete(key);
+    }
+    const a = makeAudio(src, volume ?? volumeFor(key), loop);
+    activeEvents.set(key, a);
+    a.onended = () => activeEvents.delete(key);
+    const p = a.play();
+    if (p && p.catch) p.catch(()=>{});
+    return a;
+  }
+
   function play(type) {
-    if (muted) return;
-    const c = getCtx(); if (!c) return;
-    try {
-      const osc = c.createOscillator();
-      const gain = c.createGain();
-      osc.connect(gain); gain.connect(c.destination);
-      const t = c.currentTime;
-      if (type === 'pick') {
-        osc.type='sine'; osc.frequency.setValueAtTime(440,t); osc.frequency.exponentialRampToValueAtTime(880,t+.12);
-        gain.gain.setValueAtTime(.18,t); gain.gain.exponentialRampToValueAtTime(.001,t+.18);
-        osc.start(t); osc.stop(t+.18);
-      } else if (type === 'win') {
-        osc.type='triangle';
-        [523,659,784,1047].forEach((f,i)=>{ osc.frequency.setValueAtTime(f,t+i*.1); });
-        gain.gain.setValueAtTime(.2,t); gain.gain.exponentialRampToValueAtTime(.001,t+.55);
-        osc.start(t); osc.stop(t+.55);
-      } else if (type === 'lose') {
-        osc.type='sawtooth'; osc.frequency.setValueAtTime(220,t); osc.frequency.exponentialRampToValueAtTime(110,t+.3);
-        gain.gain.setValueAtTime(.15,t); gain.gain.exponentialRampToValueAtTime(.001,t+.3);
-        osc.start(t); osc.stop(t+.3);
-      } else if (type === 'confirm') {
-        osc.type='sine'; osc.frequency.setValueAtTime(660,t); gain.gain.setValueAtTime(.12,t);
-        gain.gain.exponentialRampToValueAtTime(.001,t+.1); osc.start(t); osc.stop(t+.1);
-      } else if (type === 'toss') {
-        osc.type='triangle'; osc.frequency.setValueAtTime(330,t); osc.frequency.setValueAtTime(660,t+.15);
-        gain.gain.setValueAtTime(.15,t); gain.gain.exponentialRampToValueAtTime(.001,t+.3);
-        osc.start(t); osc.stop(t+.3);
-      } else if (type === 'card') {
-        osc.type='sine'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(600,t+.08);
-        gain.gain.setValueAtTime(.1,t); gain.gain.exponentialRampToValueAtTime(.001,t+.12);
-        osc.start(t); osc.stop(t+.12);
-      } else if (type === 'pack') {
-        [523,659,784,880,1047].forEach((f,i)=>{
-          const o2=c.createOscillator(), g2=c.createGain();
-          o2.connect(g2); g2.connect(c.destination);
-          o2.type='triangle'; o2.frequency.setValueAtTime(f,t+i*.07);
-          g2.gain.setValueAtTime(.15,t+i*.07); g2.gain.exponentialRampToValueAtTime(.001,t+i*.07+.2);
-          o2.start(t+i*.07); o2.stop(t+i*.07+.2);
-        });
-      } else if (type === 'timer') {
-        osc.type='square'; osc.frequency.setValueAtTime(880,t);
-        gain.gain.setValueAtTime(.06,t); gain.gain.exponentialRampToValueAtTime(.001,t+.07);
-        osc.start(t); osc.stop(t+.07);
-      }
-    } catch(e) {}
+    const map = {
+      pick: 'stat_select',
+      stat_select: 'stat_select',
+      confirm: 'confirm_stat',
+      confirm_stat: 'confirm_stat',
+      toss: 'timer_tick',
+      coin_toss: 'timer_tick',
+      card: 'card_flip',
+      card_flip: 'card_flip',
+      card_deal: 'card_deal',
+      pack: 'card_deal',
+      timer: 'timer_tick',
+      timerWarning: 'timer_warning',
+      round_result: 'round_result',
+      round_won: 'round_won',
+      round_lost: 'round_lost',
+      win: 'game_won',
+      lose: 'game_lost',
+      game_won: 'game_won',
+      game_lost: 'game_lost',
+      match_made: 'match_made',
+      notification: 'notification',
+      button: 'button',
+      error: 'error',
+    };
+    playFile(map[type] || type);
   }
-  function toggleMute() { muted = !muted; try { localStorage.setItem('scc_muted', muted ? '1' : '0'); } catch(e){} return muted; }
-  function loadMutePref() { try { if (localStorage.getItem('scc_muted') === '1') muted = true; } catch(e){} }
+
+  function unlock() {
+    unlocked = true;
+    if (pendingMusicKey && !muted) playMusic(pendingMusicKey);
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    try { localStorage.setItem('scc_muted', muted ? '1' : '0'); } catch(e) {}
+    if (muted) {
+      stopMusic(false);
+      stopEvents();
+    } else if (pendingMusicKey) {
+      unlock();
+      playMusic(pendingMusicKey, true);
+    }
+    return muted;
+  }
+
+  function loadMutePref() {
+    try { if (localStorage.getItem('scc_muted') === '1') muted = true; } catch(e) {}
+  }
+
   loadMutePref();
-  return { play, toggleMute, isMuted: () => muted };
+  document.addEventListener('pointerdown', unlock, { passive:true });
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest && e.target.closest('button')) play('button');
+  }, true);
+
+  return {
+    play, playMusic, playGameMusic, stopMusic, stopEvents, unlock,
+    toggleMute, isMuted: () => muted,
+  };
 })();
 
 // ── PICK TIMER ───────────────────────────────────────────────────
@@ -1316,7 +1437,7 @@ function startPickTimer(seconds, onExpire) {
     if (el) {
       el.textContent = Math.max(0, G.pickSecondsLeft);
       el.style.color = G.pickSecondsLeft <= 5 ? 'var(--red)' : 'var(--gold)';
-      if (G.pickSecondsLeft <= 5 && G.pickSecondsLeft > 0) SFX.play('timer');
+      if (G.pickSecondsLeft <= 5 && G.pickSecondsLeft > 0) { if (G.pickSecondsLeft === 5) SFX.play('timerWarning'); else SFX.play('timer'); }
     }
     if (G.pickSecondsLeft <= 0) {
       clearPickTimer();
@@ -1501,6 +1622,7 @@ function showMatchmakingScreen(state, opponentName) {
     sub.textContent   = `Getting ready to play ${opponentName}…`;
     cancelBtn.classList.add('hidden');
   } else if (state === 'matched') {
+    SFX.play('match_made');
     icon.textContent  = '🎉';
     title.textContent = 'OPPONENT FOUND!';
     sub.textContent   = `Format: ${G.selectedFormat || 'ODI'}`;
@@ -1544,6 +1666,9 @@ function allowedStats()  { return STAT_CONFIG.map(s => s.key); }
 // PRE-MATCH HAND ARRANGEMENT
 // ═══════════════════════════════════════════════════════════════════
 function showArrangePhase() {
+  SFX.stopEvents();
+  SFX.play('card_deal');
+  SFX.playGameMusic(G.selectedFormat || 'ODI', G.round || 0);
   G.arranging = true;
   G.arrangeSecondsLeft = 30;
   if (G.arrangeTimer) clearInterval(G.arrangeTimer);
@@ -1738,7 +1863,9 @@ function finishArrangeHand(manualReady) {
 }
 
 function applyRoundStart({ round, yourCard, pickerIndex, pickerName, scores, totalRounds }) {
-  clearPickTimer();  // clear any lingering timer from previous round
+  clearPickTimer();
+  SFX.stopEvents();
+  SFX.playGameMusic(G.selectedFormat || 'ODI', round);  // clear any lingering timer from previous round
   G.round       = round;
   G.myCard      = hydrateCardAvatar(yourCard);
   G.phase       = 'pick';
@@ -1792,6 +1919,7 @@ function initSocket() {
   });
 
   socket.on('challenge:received', ({ challengerSocketId, challengerName, challengerFormat, challengerRole, targetFormat, targetRole }) => {
+    SFX.play('notification');
     G.pendingChallengerSocketId = challengerSocketId;
     G.pendingChallengerName     = challengerName;
 
@@ -1855,6 +1983,7 @@ function initSocket() {
   });
 
   socket.on('challenge:error', ({ message }) => {
+    SFX.play('error');
     setLobbyError(message);
     showPage('page-lobby');
     document.getElementById('lobby-name-section').classList.add('hidden');
@@ -1889,7 +2018,7 @@ function initSocket() {
     }
   });
 
-  socket.on('room:error', ({ message }) => { setLobbyError(message); showLobby(); });
+  socket.on('room:error', ({ message }) => { SFX.play('error'); setLobbyError(message); showLobby(); });
 
   // Fill countdown tick from server
   socket.on('room:fillCountdown', ({ secondsLeft, playersNow, maxPlayers }) => {
@@ -1897,7 +2026,7 @@ function initSocket() {
     if (el) {
       el.textContent = secondsLeft;
       el.style.color = secondsLeft <= 10 ? 'var(--red)' : 'var(--gold)';
-      if (secondsLeft <= 10 && secondsLeft > 0) SFX.play('timer');
+      if (secondsLeft <= 10 && secondsLeft > 0) { if (secondsLeft === 10) SFX.play('timerWarning'); else SFX.play('timer'); }
     }
     const wrap = document.getElementById('fill-countdown-wrap');
     if (wrap) wrap.classList.remove('hidden');
@@ -1988,6 +2117,7 @@ function initSocket() {
   });
 
   socket.on('round:statChosen', ({ statKey, pickerName, youMustConfirm, confirmTimeLimit }) => {
+    SFX.play('stat_select');
     G.phase      = 'confirm';
     G.chosenStat = statKey;
     G.confirmedOnline = false;
@@ -2101,6 +2231,7 @@ function initSocket() {
   });
 
   socket.on('room:error', ({ message }) => {
+    SFX.play('error');
     setLobbyError(message);
     showLobby();
   });
@@ -2172,6 +2303,14 @@ function initSocket() {
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+  handlePageAudio(id);
+}
+function handlePageAudio(id) {
+  // Menu/lobby pages keep subtle menu music. Match/arrange pages switch to format music.
+  if (id === 'page-final') { SFX.stopMusic(); return; }
+  if (id === 'page-match' || id === 'page-arrange') { SFX.playGameMusic(G.selectedFormat || 'ODI', G.round || 0); return; }
+  if (id === 'page-cointoss') { SFX.stopEvents(); return; }
+  if (!G.inGame) SFX.playMusic('main_menu');
 }
 function showLanding() {
   G.inGame = false;
@@ -2964,6 +3103,8 @@ function revealOnlineTossResult() {
 
 
 function aiRenderRound() {
+  SFX.stopEvents();
+  SFX.playGameMusic(G.selectedFormat || 'ODI', G.round || 0);
   G.myCard     = G.myHand[G.round];
   G.oppCards   = {};  // clear — AI card hidden until reveal
   G.phase      = 'pick';
@@ -3315,6 +3456,10 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
   else if (!iWon)         { label.textContent='ROUND LOST';    label.className='result-label lose'; }
   else                    { label.textContent='DRAW!';         label.className='result-label draw'; }
 
+  SFX.play('round_result');
+  if (iWon && !isDraw) SFX.play('round_won');
+  else if (!iWon) SFX.play('round_lost');
+
   // Stat comparison line
   const sc  = STAT_CONFIG.find(s=>s.key===statKey);
   const myV = displayVal(G.myCard, statKey);
@@ -3479,6 +3624,8 @@ function handleNextRound() {
 // FINAL RESULT
 // ═══════════════════════════════════════════════════════════════════
 function showFinalResult(finalRanking, myIndex) {
+  SFX.stopMusic();
+  SFX.stopEvents();
   document.getElementById('result-overlay').classList.add('hidden');
 
   // Build ranking from G.players if no server ranking provided
