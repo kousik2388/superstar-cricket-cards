@@ -1107,6 +1107,7 @@ const G = {
   arrangeTimer: null,
   arrangeSecondsLeft: 30,
   pendingRoundStart: null,
+  tossPickerIndex: -1,   // set immediately from game:tossResult
   gameReady: false,  // true only after arrange phase complete
   _waitingForTossResult: false,
   // for lobby
@@ -1723,6 +1724,17 @@ function initSocket() {
     }
   });
 
+  // Toss result arrives immediately after game:start so coin toss can resolve
+  // without waiting for round:start (which only fires post-arrange)
+  socket.on('game:tossResult', ({ pickerIndex, pickerName }) => {
+    G.tossPickerIndex = pickerIndex;
+    G.tossPickerName  = pickerName;
+    // If coin toss screen is already showing and waiting, reveal result now
+    if (G._waitingForTossResult) {
+      revealOnlineTossResult();
+    }
+  });
+
   socket.on('challenge:accepted', ({ opponentName, code, agreedFormat, agreedRole }) => {
     G.roomCode = code;
     // Apply the agreed format/role for this match
@@ -1858,6 +1870,8 @@ function initSocket() {
     G.myCard      = null;
     G.oppCards    = {};
     G.pendingRoundStart = null;
+    G.tossPickerIndex = -1;
+    G.tossPickerName  = null;
     G.gameReady   = false;
     G._waitingForTossResult = false;
     G.inGame      = true;
@@ -2810,16 +2824,20 @@ function revealOnlineTossResult() {
   const sub   = document.getElementById('cointoss-sub');
   const btn   = document.getElementById('cointoss-continue-btn');
 
-  // pickerIndex from buffered round:start, or wait for it
-  const pickerIdx  = G.pendingRoundStart?.pickerIndex ?? G.pickerIndex ?? -1;
-  const pickerName = G.pendingRoundStart?.pickerName  || (pickerIdx === G.myIndex ? 'You' : null);
+  // pickerIndex from tossResult (arrives right after game:start),
+  // or fall back to buffered round:start, or wait
+  const pickerIdx  = G.tossPickerIndex >= 0
+    ? G.tossPickerIndex
+    : (G.pendingRoundStart?.pickerIndex ?? -1);
+  const pickerName = G.tossPickerName
+    || G.pendingRoundStart?.pickerName
+    || (pickerIdx === G.myIndex ? 'You' : null);
 
   if (pickerIdx === -1) {
-    // round:start not arrived yet — show spinner, wait
+    // tossResult not arrived yet — show spinner and wait for it
     label.textContent = 'DECIDING…';
     label.style.color = 'var(--gray)';
     sub.textContent   = 'Waiting for server…';
-    // Will be called again by round:start buffer check
     G._waitingForTossResult = true;
     return;
   }
