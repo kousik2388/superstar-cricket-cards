@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V69</title>
+<title>Superstar Cricket Cards — V70</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -424,17 +424,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .podium-pts{font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:1px}
 
 /* RESULT CARDS AREA */
-.result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1;min-height:0}
-/* 2-player: side by side, fill available height */
-.result-cards-area.two-player{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:stretch;flex:1;min-height:0}
+.result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1}
+/* 2-player: side by side */
+.result-cards-area.two-player{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
 .result-multi-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
 .result-card-wrap{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-height:0}
 .result-card-label{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
   width:100%;text-align:center;flex-shrink:0}
 .result-card-label.you{color:var(--gold)}
 .result-card-label.opp{color:var(--blue)}
-/* Avatar fills remaining height dynamically */
-.result-cards-area.two-player .card-avatar{height:auto!important;flex:1!important;min-height:min(140px,35vw)}
+/* Avatar fills remaining height dynamically but capped sensibly */
+.result-cards-area.two-player .card-avatar{height:min(200px,48vw)!important;flex:none!important;max-height:48vh}
 
 /* RESULT FOOTER */
 .result-footer{width:100%;max-width:100%;display:flex;flex-direction:column;gap:8px;
@@ -550,11 +550,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   width:100%;
   flex:1 1 0;
   min-width:0;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
 }
-.result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;flex-direction:column!important;flex:1!important}
+.result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important}
 .result-cards-area.two-player .card-avatar{height:auto!important;flex:1!important;min-height:min(140px,35vw)!important}
 .result-cards-area.two-player .card-player-name{font-size:clamp(11px,3.4vw,16px)!important}
 .result-cards-area.two-player .card-country-role{font-size:9px!important}
@@ -825,7 +822,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V69</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V70</div>
     <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
