@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V62</title>
+<title>Superstar Cricket Cards — V65</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -191,15 +191,27 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .fitness-bar-fill.bowling{background:linear-gradient(90deg,#DAB985,#2090c0)}
 
 /* MATCH PAGE */
-#page-match{padding:8px 10px 20px;gap:6px;align-items:center}
-.match-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
-.round-info{text-align:right}
-.round-badge{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
-  border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center}
-
+#page-match{padding:6px 6px 10px;gap:4px;align-items:center}
+.match-header{display:none}
+.round-info{display:none}
+/* NEW TOP BAR */
+.match-topbar{width:100%;display:flex;align-items:center;gap:6px;padding:2px 0 6px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:2px}
+.match-topbar-btn{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:2px;
+  padding:5px 10px;border-radius:4px;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);color:var(--white);white-space:nowrap;cursor:default;line-height:1.2;text-align:center}
+.match-format-tag{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:2px;
+  padding:5px 10px;border-radius:4px;border:1px solid rgba(206,171,118,.4);
+  color:var(--gold);background:rgba(206,171,118,.08);white-space:nowrap;line-height:1.2}
+.round-badge{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:2px;
+  padding:5px 10px;border-radius:4px;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);color:var(--white);white-space:nowrap;line-height:1.2}
+.match-quit-btn{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:2px;
+  padding:5px 10px;border-radius:4px;border:1px solid rgba(199,81,28,.5);
+  background:rgba(199,81,28,.08);color:var(--red);white-space:nowrap;cursor:pointer;line-height:1.2}
+.match-quit-btn:active{opacity:.7}
 
 /* V42: keep mute control in flow so it does not overlap round/status text */
-.audio-toggle-row{width:100%;max-width:var(--card-w);display:flex;justify-content:flex-end;align-items:center;margin:-2px 0 2px;}
+.audio-toggle-row{display:none}
 .mute-btn,#mute-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
   border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;color:var(--gray);min-width:42px;}
 .mute-btn:hover,#mute-btn:hover{border-color:rgba(206,171,118,.55);color:var(--aged-cream);}
@@ -217,17 +229,34 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 /* STATUS BANNER */
 .status-banner{width:100%;max-width:var(--card-w);background:rgba(0,0,0,.5);border-radius:8px;
-  padding:7px 12px;text-align:center;font-family:'Bebas Neue',cursive;font-size:14px;letter-spacing:2px;
-  border:1px solid rgba(255,255,255,.1);min-height:34px;display:flex;align-items:center;justify-content:center}
+  padding:6px 12px;text-align:center;font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;
+  border:1px solid rgba(255,255,255,.1);min-height:30px;display:flex;align-items:center;justify-content:center}
 .status-banner.your-turn{border-color:var(--gold);color:var(--gold);background:rgba(206,171,118,.08)}
 .status-banner.wait{border-color:var(--blue);color:var(--blue);background:rgba(218,185,133,.06)}
 .status-banner.confirm{border-color:var(--green-win);color:var(--green-win);background:rgba(184,130,57,.08)}
 
-/* CRICKET CARD */
-.cards-area{display:flex;flex-direction:column;gap:6px;align-items:center;width:100%}
-.card-label{font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:3px;color:var(--gray);
-  width:var(--card-w);text-align:center;padding-bottom:2px}
+/* CRICKET CARD side-by-side layout */
+.cards-area{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:3px 6px;align-items:start;width:100%}
+.card-label{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;color:var(--gray);text-align:center;padding-bottom:2px}
 .card-label.you{color:var(--gold)}
+#my-card-label{grid-column:1;grid-row:1}
+#opp-card-label{grid-column:2;grid-row:1}
+#my-card-area{grid-column:1;grid-row:2}
+#opp-card-area{grid-column:2;grid-row:2}
+#page-match .scoreboard-bar{max-width:100%}
+#page-match .status-banner{max-width:100%}
+#page-match .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important}
+#page-match .card-facedown{width:100%!important;min-width:0!important}
+#page-match .card-avatar{height:min(170px,44vw)!important;flex:none!important}
+#page-match .card-player-name{font-size:clamp(11px,3.4vw,16px)!important}
+#page-match .card-country-role{font-size:8px!important}
+#page-match .rarity-badge{font-size:7px!important;padding:1px 4px!important}
+#page-match .stat-scroll{max-height:calc(100svh - 290px)!important;overflow-y:auto}
+#page-match .stat-btn{padding:3px 5px!important;margin-bottom:1px!important}
+#page-match .stat-label{font-size:9px!important}
+#page-match .stat-value{font-size:10px!important;min-width:36px!important}
+#page-match .card-stats{padding:3px 4px!important}
+#page-match .card-header{padding:5px 6px 4px!important}
 .cricket-card{width:var(--card-w);border-radius:12px;position:relative;overflow:hidden;
   box-shadow:0 8px 28px rgba(0,0,0,.6);border:2px solid var(--gold)}
 .cricket-card.rarity-common{border-color:var(--rc)}
@@ -244,7 +273,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .rarity-badge.rarity-epic{background:rgba(170,90,39,.2);color:var(--re);border:1px solid var(--re)}
 .rarity-badge.rarity-legendary{background:rgba(206,171,118,.2);color:var(--rl);border:1px solid var(--rl)}
 .card-avatar{height:var(--card-w);background:linear-gradient(180deg,rgba(30,92,56,.6),rgba(13,43,26,.9));
-  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  color:transparent;font-size:0}
 .card-avatar::before{content:'';position:absolute;inset:0;
   background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,.015) 6px,rgba(255,255,255,.015) 12px)}
 .player-silhouette{font-size:52px;opacity:.5}
@@ -394,15 +424,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 /* RESULT CARDS AREA */
 .result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1}
+/* 2-player: side by side */
+.result-cards-area.two-player{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
 .result-multi-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
 .result-card-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
 .result-card-label{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
-  width:var(--card-w);text-align:center}
+  width:100%;text-align:center}
 .result-card-label.you{color:var(--gold)}
 .result-card-label.opp{color:var(--blue)}
 
 /* RESULT FOOTER */
-.result-footer{width:100%;max-width:var(--card-w);display:flex;flex-direction:column;gap:8px;
+.result-footer{width:100%;max-width:100%;display:flex;flex-direction:column;gap:8px;
   padding-top:12px;flex-shrink:0}
 .next-picker-note{font-size:12px;color:var(--gold);text-align:center;
   background:rgba(206,171,118,.08);border:1px solid rgba(206,171,118,.2);border-radius:6px;padding:6px 10px}
@@ -495,7 +527,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   width:100%;
   height:var(--card-w);
   aspect-ratio:1/1;
-  flex:0 0 var(--card-w);
+  flex:0 0 auto;
+  color:transparent;font-size:0;
 }
 .card-avatar img{
   width:100%!important;
@@ -506,21 +539,25 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   background:#0d1f14!important;
 }
 .cricket-card{
-  width:var(--card-w)!important;
-  max-width:var(--card-w)!important;
-  min-width:var(--card-w)!important;
-  flex:0 0 auto;
-}
-.result-card-wrap{
   width:var(--card-w);
   max-width:var(--card-w);
   flex:0 0 auto;
 }
-.result-multi-cards .cricket-card{
-  width:100%!important;
-  min-width:0!important;
-  max-width:100%!important;
+.result-card-wrap{
+  width:100%;
+  flex:1 1 0;
+  min-width:0;
 }
+.result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important}
+.result-cards-area.two-player .card-avatar{height:min(130px,36vw)!important;flex:none!important}
+.result-cards-area.two-player .card-player-name{font-size:clamp(10px,3.2vw,14px)!important}
+.result-cards-area.two-player .card-country-role{font-size:8px!important}
+.result-cards-area.two-player .rarity-badge{font-size:7px!important;padding:1px 4px!important}
+.result-cards-area.two-player .card-stats{padding:3px 4px!important}
+.result-cards-area.two-player .stat-btn{padding:3px 5px!important;margin-bottom:1px!important}
+.result-cards-area.two-player .stat-label{font-size:9px!important}
+.result-cards-area.two-player .stat-value{font-size:10px!important;min-width:36px!important}
+.result-cards-area.two-player .card-header{padding:5px 6px 4px!important}
 @media (max-height:720px){
   .landing-logo-img{width:min(390px,90vw);max-height:150px;margin-bottom:14px;}
 }
@@ -767,7 +804,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V62</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V65</div>
     <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
@@ -1235,28 +1272,29 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 
 <!-- MATCH -->
 <div id="page-match" class="page hidden">
-  <div class="match-header">
-    <div class="scoreboard-bar" id="scoreboard-bar"></div>
-    <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
-      <div id="category-tag" style="font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
-        padding:2px 8px;border-radius:3px;border:1px solid rgba(206,171,118,.4);
-        color:var(--gold);background:rgba(206,171,118,.08);"></div>
-      <div class="round-badge" id="round-badge">Round 1/10</div>
-      <button onclick="confirmQuit()" style="background:transparent;border:1px solid rgba(255,255,255,.15);
-        color:var(--gray);font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
-        padding:2px 8px;border-radius:3px;cursor:pointer;">✕ QUIT</button>
+
+  <!-- TOP BAR: format · round · mute · quit -->
+  <div class="match-topbar">
+    <div id="category-tag" class="match-format-tag"></div>
+    <div class="round-badge" id="round-badge">Round 1/10</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <button id="mute-btn" class="mute-btn" onclick="toggleMute()" title="Toggle sound">🔊</button>
+      <button onclick="confirmQuit()" class="match-quit-btn">✕ QUIT</button>
     </div>
   </div>
+
+  <!-- SCORES -->
+  <div class="scoreboard-bar" id="scoreboard-bar"></div>
+
+  <!-- STATUS + COUNTDOWN -->
   <div class="status-banner" id="status-banner">Loading…</div>
-  <div class="audio-toggle-row">
-    <button id="mute-btn" class="mute-btn" onclick="toggleMute()" title="Toggle sound">🔊</button>
-  </div>
-  <div id="pick-countdown-wrap" class="hidden" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0 2px;">
+  <div id="pick-countdown-wrap" class="hidden" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;">
     <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">PICK IN</div>
-    <div id="pick-countdown" style="font-family:'Bebas Neue',cursive;font-size:28px;color:var(--gold);min-width:32px;text-align:center;line-height:1;">15</div>
+    <div id="pick-countdown" style="font-family:'Bebas Neue',cursive;font-size:24px;color:var(--gold);min-width:28px;text-align:center;line-height:1;">15</div>
     <div style="font-size:11px;letter-spacing:2px;color:var(--gray);">SECS</div>
   </div>
-  <!-- OPPONENT CHOOSING TOAST — fixed overlay, shown when opponent picks -->
+
+  <!-- OPPONENT CHOOSING TOAST -->
   <div id="opp-choosing-toast">
     <div class="opp-toast-icon">🤔</div>
     <div class="opp-toast-name" id="opp-toast-name">OPPONENT</div>
@@ -1264,11 +1302,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div class="opp-toast-dots"><span></span><span></span><span></span></div>
   </div>
 
+  <!-- CARDS SIDE BY SIDE -->
   <div class="cards-area">
-    <div class="card-label" id="opp-card-label">⚔ OPPONENT</div>
-    <div id="opp-card-area"></div>
     <div class="card-label you" id="my-card-label">★ YOUR CARD</div>
+    <div class="card-label" id="opp-card-label">⚔ OPPONENT</div>
     <div id="my-card-area"></div>
+    <div id="opp-card-area"></div>
   </div>
 </div>
 
@@ -1809,8 +1848,7 @@ function toggleMute() {
 // Default fallback avatar — served from public/avatars/default_card.png (uploaded to GitHub).
 const DEFAULT_PLAYER_AVATAR_SRC = 'avatars/default_card.png';
 
-// On itch.io the HTML is served as a standalone file with no /public/ folder alongside it.
-// Prefix avatar paths with the Render origin so images load correctly on both platforms.
+// On itch.io the HTML is a standalone file — prefix avatar paths with Render origin.
 const RENDER_ORIGIN = 'https://superstar-cricket-cards.onrender.com';
 const IS_ITCH = !window.location.hostname.includes('onrender.com') &&
                 !window.location.hostname.includes('localhost') &&
@@ -1825,7 +1863,7 @@ function avatarSrc(path) {
 // Clean fallback when an avatar image fails to load
 function avatarFallback(img) {
   if (img) {
-    img.onerror = null; // prevent infinite loop
+    img.onerror = null;
     img.src = avatarSrc(DEFAULT_PLAYER_AVATAR_SRC);
     img.style.display = '';
     img.style.objectFit = 'cover';
@@ -3302,8 +3340,7 @@ function startAIGame() {
     }
     // Since dropdown only shows countries with >=10 cards, squad is always usable
   }
-  // V62: if country filter is active, always honour it — pad by repeating country cards
-  // rather than silently falling back to the full deck (which caused mixed-country hands).
+  // V63: if country filter active, pad with country cards rather than falling back to full deck
   let pool = uniqueCardsById(squad);
   if (pool.length < 20) {
     if (G.selectedCountry && pool.length >= 5) {
@@ -3503,13 +3540,16 @@ function aiRenderRound() {
     banner.className = 'status-banner wait';
     renderMyCard({ clickable: false });
     renderOppFacedown();
+    // Show "AI is choosing" toast just like online opponent
+    showOppChoosingToast(true, G.players[1]?.name || 'AI');
     setTimeout(() => {
+      showOppChoosingToast(false);
       const aiId   = 'ai_player';
       const aiCard = G.aiHands[aiId][G.round];
       const best   = aiPickBestStat(aiCard, 'all');
       SFX.play('pick');
       aiStatChosen(best);
-    }, 1200);
+    }, 1400);
   }
   }); // end requestAnimationFrame
 }
@@ -4006,11 +4046,11 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
     });
   }
 
-  // Render single column — opponent card then my card (for 2-player feel)
-  // For 4-player wrap into 2x2 grid
+  // Render cards — side by side for 2-player, single column / grid for multi
   if (allWraps.length <= 2) {
-    // Opponent first, me second
-    [...allWraps].reverse().forEach(w => {
+    // Side by side: YOU left, opponent right
+    cardsArea.className = 'result-cards-area two-player';
+    allWraps.forEach(w => {
       const wrap = document.createElement('div');
       wrap.className = 'result-card-wrap';
       wrap.innerHTML = `<div class="result-card-label ${w.labelCls}">${w.label}</div>
@@ -4019,6 +4059,7 @@ function showResultOverlay({ iWon, isDraw, statKey, isLastRound, nextPickerName,
     });
   } else {
     // Multi-card grid
+    cardsArea.className = 'result-cards-area';
     const grid = document.createElement('div');
     grid.className = 'result-multi-cards';
     allWraps.forEach(w => {
