@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V65</title>
+<title>Superstar Cricket Cards — V67</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -401,7 +401,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 /* RESULT OVERLAY */
 #result-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);backdrop-filter:blur(6px);
-  display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:14px 12px 24px}
+  display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:10px 10px 20px}
 .result-header{text-align:center;padding:6px 0 10px;width:100%;flex-shrink:0}
 .result-label{font-family:'Bebas Neue',cursive;font-size:38px;letter-spacing:5px;line-height:1}
 .result-label.win{color:var(--green-win);text-shadow:0 0 24px rgba(184,130,57,.6)}
@@ -549,15 +549,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   min-width:0;
 }
 .result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important}
-.result-cards-area.two-player .card-avatar{height:min(130px,36vw)!important;flex:none!important}
-.result-cards-area.two-player .card-player-name{font-size:clamp(10px,3.2vw,14px)!important}
-.result-cards-area.two-player .card-country-role{font-size:8px!important}
-.result-cards-area.two-player .rarity-badge{font-size:7px!important;padding:1px 4px!important}
-.result-cards-area.two-player .card-stats{padding:3px 4px!important}
-.result-cards-area.two-player .stat-btn{padding:3px 5px!important;margin-bottom:1px!important}
-.result-cards-area.two-player .stat-label{font-size:9px!important}
-.result-cards-area.two-player .stat-value{font-size:10px!important;min-width:36px!important}
-.result-cards-area.two-player .card-header{padding:5px 6px 4px!important}
+.result-cards-area.two-player .card-avatar{height:min(160px,42vw)!important;flex:none!important}
+.result-cards-area.two-player .card-player-name{font-size:clamp(11px,3.4vw,16px)!important}
+.result-cards-area.two-player .card-country-role{font-size:9px!important}
+.result-cards-area.two-player .rarity-badge{font-size:8px!important;padding:2px 5px!important}
+.result-cards-area.two-player .card-stats{padding:4px 5px!important}
+.result-cards-area.two-player .stat-btn{padding:4px 6px!important;margin-bottom:1px!important}
+.result-cards-area.two-player .stat-label{font-size:10px!important}
+.result-cards-area.two-player .stat-value{font-size:11px!important;min-width:38px!important}
+.result-cards-area.two-player .card-header{padding:6px 8px 5px!important}
 @media (max-height:720px){
   .landing-logo-img{width:min(390px,90vw);max-height:150px;margin-bottom:14px;}
 }
@@ -785,6 +785,20 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 }
 /* ═════════ END V55 FIX ═════════ */
 
+/* ═════════ DESKTOP / PC LAYOUT ═════════ */
+@media(min-width:600px){
+  /* Constrain game to a phone-width column, centered */
+  body{display:flex;justify-content:center;background:#0B121B}
+  .page,.page-loading-screen{max-width:480px;width:100%;margin:0 auto}
+  #result-overlay{align-items:center}
+  #result-overlay > *{max-width:480px;width:100%}
+  /* Match page: bigger avatar on wide screens */
+  #page-match .card-avatar{height:min(200px,28vw)!important}
+  #page-match .stat-scroll{max-height:calc(100svh - 260px)!important}
+  /* Result: bigger avatar since there's more room */
+  .result-cards-area.two-player .card-avatar{height:min(180px,24vw)!important}
+}
+
 </style>
 </head>
 <body>
@@ -804,7 +818,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V65</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V67</div>
     <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
@@ -815,7 +829,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <!-- Publisher label -->
     <div style="font-family:'Bebas Neue',cursive;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.35);margin-bottom:10px;text-align:center;">SUPERSTAR GAMES</div>
     <!-- Logo image -->
-    <img class="landing-logo-img" src="superstar_cricket_cards_landing_logo.png" alt="Superstar Cricket Cards Logo">
+    <img class="landing-logo-img" id="landing-logo-img" src="superstar_cricket_cards_landing_logo.png" alt="Superstar Cricket Cards Logo">
     <div class="menu-buttons">
       <div class="menu-label">🤖 SINGLE PLAYER</div>
       <button class="btn-green" onclick="showFormatSelect()">▶ PLAY VS AI</button>
@@ -853,6 +867,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
         <div class="count-btn"        id="diff-medium" onclick="setAIDifficulty('medium')" style="font-size:11px;padding:6px 12px;">MEDIUM</div>
         <div class="count-btn"        id="diff-hard"   onclick="setAIDifficulty('hard')"   style="font-size:11px;padding:6px 12px;">HARD</div>
       </div>
+      <div id="diff-desc" style="font-size:11px;color:var(--gray);text-align:center;margin-top:8px;min-height:16px;letter-spacing:.3px;line-height:1.4;transition:opacity .2s;">
+        Picks randomly — great for learning the cards
+      </div>
     </div>
     <button class="btn-danger" style="max-width:200px;" onclick="G.onlineMode?showPage('page-landing'):showLanding()">← BACK</button>
   </div>
@@ -869,16 +886,24 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <!-- Country Filter (AI mode only) -->
     <div id="country-filter-wrap" style="width:100%;max-width:300px;">
       <div style="font-size:10px;letter-spacing:2px;color:var(--gray);margin-bottom:6px;">🌍 FILTER BY COUNTRY (OPTIONAL)</div>
-      <div style="position:relative;">
-        <select id="country-filter-select" onchange="onCountryChange(this.value)"
+      <!-- Custom dropdown — native select can't render flag emojis on Android -->
+      <div id="country-custom-select" style="position:relative;">
+        <div id="country-selected-display" onclick="toggleCountryDropdown()"
           style="width:100%;background:#1a3a28;border:1px solid rgba(206,171,118,.4);
-          border-radius:6px;padding:10px 12px;color:#E8C68F;font-family:'Rajdhani',sans-serif;
-          font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;
-          appearance:none;-webkit-appearance:none;">
-          <option value="" style="background:#1a3a28;color:#E8C68F;">All Countries</option>
-        </select>
-        <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gold);">▼</div>
+          border-radius:6px;padding:10px 36px 10px 12px;color:#E8C68F;font-family:'Rajdhani',sans-serif;
+          font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;position:relative;user-select:none;">
+          🌍 All Countries
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);">▼</span>
+        </div>
+        <div id="country-dropdown-list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+          background:#111B27;border:1px solid rgba(206,171,118,.4);border-radius:6px;
+          max-height:220px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.6);">
+        </div>
       </div>
+      <!-- Hidden real select kept for value tracking -->
+      <select id="country-filter-select" style="display:none;" onchange="onCountryChange(this.value)">
+        <option value="">All Countries</option>
+      </select>
       <div id="country-card-hint" style="font-size:11px;color:var(--gray);text-align:center;min-height:14px;margin-top:4px;letter-spacing:.5px;"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
@@ -920,6 +945,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div id="cointoss-result" style="min-height:60px;display:flex;flex-direction:column;align-items:center;gap:8px;">
       <div id="cointoss-label" style="font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:4px;color:var(--gold);"></div>
       <div id="cointoss-sub" style="font-size:14px;color:var(--gray);"></div>
+    </div>
+    <!-- Visual tick timer -->
+    <div id="cointoss-timer-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div id="cointoss-timer-bar-bg" style="width:180px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;">
+        <div id="cointoss-timer-bar" style="height:100%;width:100%;background:var(--gold);border-radius:3px;transition:width 0.1s linear;"></div>
+      </div>
+      <div id="cointoss-timer-secs" style="font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:3px;color:var(--gray);"></div>
     </div>
     <div id="cointoss-countdown-wrap" class="hidden" style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:4px;color:var(--gray);margin-bottom:4px;">
       TOSS IN <span id="cointoss-countdown">3</span>
@@ -1589,7 +1621,7 @@ const SFX = (() => {
   const activeEvents = new Map();
 
   function makeAudio(src, volume, loop=false) {
-    const a = new Audio(src);
+    const a = new Audio(typeof assetSrc === 'function' ? assetSrc(src) : src);
     a.preload = 'auto';
     a.volume = volume;
     a.loop = loop;
@@ -1858,6 +1890,17 @@ function avatarSrc(path) {
   if (!path) return IS_ITCH ? RENDER_ORIGIN + '/' + DEFAULT_PLAYER_AVATAR_SRC : DEFAULT_PLAYER_AVATAR_SRC;
   if (IS_ITCH && path.startsWith('avatars/')) return RENDER_ORIGIN + '/' + path;
   return path;
+}
+function assetSrc(path) {
+  if (IS_ITCH && path && !path.startsWith('http')) return RENDER_ORIGIN + '/' + path;
+  return path;
+}
+// Fix logo and audio paths on itch.io
+if (IS_ITCH) {
+  document.addEventListener('DOMContentLoaded', function() {
+    const logo = document.getElementById('landing-logo-img');
+    if (logo) logo.src = RENDER_ORIGIN + '/superstar_cricket_cards_landing_logo.png';
+  });
 }
 
 // Clean fallback when an avatar image fails to load
@@ -2768,6 +2811,16 @@ function setAIDifficulty(d) {
     const el = document.getElementById(`diff-${x}`);
     if (el) el.classList.toggle('active', x === d);
   });
+  const descs = {
+    easy:   'Picks randomly — great for learning the cards',
+    medium: 'Picks the best stat on its card — a real challenge',
+    hard:   'Analyses both cards and picks the optimal stat to beat you',
+  };
+  const desc = document.getElementById('diff-desc');
+  if (desc) {
+    desc.style.opacity = '0';
+    setTimeout(() => { desc.textContent = descs[d] || ''; desc.style.opacity = '1'; }, 150);
+  }
 }
 
 function setPlayerCount(n) {
@@ -3209,9 +3262,13 @@ function selectFormat(fmt) {
       const eligible = allCountries.filter(country => {
         return deck.filter(c => c.country === country).length >= 10;
       });
+      // Update hidden select for value tracking
       sel.innerHTML = '<option value="">All Countries</option>' +
         eligible.map(ctry => `<option value="${ctry}">${ctry}</option>`).join('');
       sel.value = '';
+      // Build custom visual dropdown with flags
+      buildCountryDropdown(eligible);
+      setCountryDisplay('', '🌍 All Countries');
     }
   }
   showPage('page-role');
@@ -3239,6 +3296,61 @@ function getCountries(deck) {
   return [...new Set(deck.map(c => c.country))].sort();
 }
 
+function countryFlag(country) {
+  const flags = {
+    'India': '🇮🇳', 'Australia': '🇦🇺', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'Pakistan': '🇵🇰', 'South Africa': '🇿🇦', 'New Zealand': '🇳🇿',
+    'West Indies': '🏝️', 'Sri Lanka': '🇱🇰', 'Bangladesh': '🇧🇩',
+    'Zimbabwe': '🇿🇼', 'Afghanistan': '🇦🇫', 'Ireland': '🇮🇪',
+    'Netherlands': '🇳🇱', 'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'UAE': '🇦🇪',
+    'Kenya': '🇰🇪', 'Namibia': '🇳🇦', 'Canada': '🇨🇦',
+  };
+  return flags[country] || '🏏';
+}
+
+function buildCountryDropdown(countries) {
+  const list = document.getElementById('country-dropdown-list');
+  if (!list) return;
+  const items = [{ val: '', label: '🌍 All Countries' }]
+    .concat(countries.map(c => ({ val: c, label: `${countryFlag(c)} ${c}` })));
+  list.innerHTML = items.map(item => `
+    <div onclick="selectCountryOption('${item.val}', '${item.label.replace(/'/g,"\\'")}') "
+      style="padding:10px 14px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;
+      color:#E8C68F;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);
+      transition:background .1s;"
+      onmouseover="this.style.background='rgba(206,171,118,.12)'"
+      onmouseout="this.style.background=''">${item.label}</div>
+  `).join('');
+}
+
+function setCountryDisplay(val, label) {
+  const display = document.getElementById('country-selected-display');
+  if (display) display.innerHTML = `${label}<span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);">▼</span>`;
+}
+
+function toggleCountryDropdown() {
+  const list = document.getElementById('country-dropdown-list');
+  if (!list) return;
+  list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectCountryOption(val, label) {
+  const sel = document.getElementById('country-filter-select');
+  if (sel) { sel.value = val; }
+  setCountryDisplay(val, label);
+  document.getElementById('country-dropdown-list').style.display = 'none';
+  onCountryChange(val);
+}
+
+// Close dropdown when tapping outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('country-custom-select');
+  if (wrap && !wrap.contains(e.target)) {
+    const list = document.getElementById('country-dropdown-list');
+    if (list) list.style.display = 'none';
+  }
+});
+
 function onCountryChange(val) {
   G.selectedCountry = val;
   const hint = document.getElementById('country-card-hint');
@@ -3252,8 +3364,19 @@ function onCountryChange(val) {
     hint.textContent = 'No cards available for this country in this format';
     hint.style.color = 'var(--red)';
   } else {
-    hint.textContent = `${countryCards.length} cards · ${batters.length} batters · ${bowlers.length} bowlers`;
     hint.style.color = 'var(--green-win)';
+    // Animate the numbers updating
+    hint.style.transition = 'none';
+    hint.style.opacity = '0';
+    hint.style.transform = 'translateY(-4px)';
+    requestAnimationFrame(() => {
+      hint.textContent = `${countryFlag(val)} ${countryCards.length} cards · ${batters.length} batters · ${bowlers.length} bowlers`;
+      requestAnimationFrame(() => {
+        hint.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+        hint.style.opacity = '1';
+        hint.style.transform = 'translateY(0)';
+      });
+    });
   }
 }
 
@@ -3380,11 +3503,28 @@ function showCoinToss() {
   const label  = document.getElementById('cointoss-label');
   const sub    = document.getElementById('cointoss-sub');
   const btn    = document.getElementById('cointoss-continue-btn');
+  const bar    = document.getElementById('cointoss-timer-bar');
+  const secs   = document.getElementById('cointoss-timer-secs');
 
   label.textContent = '';
   sub.textContent   = '';
   btn.classList.add('hidden');
   coin.className    = '';
+
+  // Visual tick timer — 1.8s spin duration
+  const SPIN_MS = 1800;
+  const startTime = Date.now();
+  if (bar) { bar.style.transition = 'none'; bar.style.width = '100%'; }
+  if (secs) secs.textContent = '';
+
+  const timerInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, SPIN_MS - elapsed);
+    const pct = (remaining / SPIN_MS) * 100;
+    if (bar) bar.style.width = pct + '%';
+    if (secs) secs.textContent = (remaining / 1000).toFixed(1) + 's';
+    if (remaining <= 0) clearInterval(timerInterval);
+  }, 50);
 
   // Spin for 1.8s then land
   coin.classList.add('coin-spinning');
@@ -3393,6 +3533,10 @@ function showCoinToss() {
     coin.classList.remove('coin-spinning');
     coin.classList.add('coin-landed');
     SFX.play('toss');
+
+    // Hide timer bar
+    const timerWrap = document.getElementById('cointoss-timer-wrap');
+    if (timerWrap) timerWrap.style.visibility = 'hidden';
 
     // Random result
     const playerGoesFirst = Math.random() < 0.5;
@@ -6054,6 +6198,16 @@ function showLeaderboard() {
 computeDeckAverages();
 // Hide all game pages — page-loading-screen is NOT in .page so stays visible
 document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+
+// Warn on refresh/close if a game is in progress
+window.addEventListener('beforeunload', function(e) {
+  if (G && G.inGame) {
+    e.preventDefault();
+    e.returnValue = 'You have a game in progress. Progress will be lost if you leave.';
+    return e.returnValue;
+  }
+});
+
 initLoadingScreen();
 </script>
 </body>
