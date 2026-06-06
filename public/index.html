@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V60</title>
+<title>Superstar Cricket Cards — V61</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -767,7 +767,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V58</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V61</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
 
@@ -3288,10 +3289,18 @@ function startAIGame() {
     }
     // Since dropdown only shows countries with >=10 cards, squad is always usable
   }
-  // V42: deal unique cards first. If a small role/country filter has fewer than 20
-  // cards, fall back to the full deck instead of padding repeats into the match.
+  // V61: if country filter is active, always honour it — pad by repeating country cards
+  // rather than silently falling back to the full deck (which caused mixed-country hands).
   let pool = uniqueCardsById(squad);
-  if (pool.length < 20) pool = uniqueCardsById(fullDeck);
+  if (pool.length < 20) {
+    if (G.selectedCountry && pool.length >= 5) {
+      const base = shuffle([...pool]);
+      while (pool.length < 20) pool = pool.concat(base);
+      pool = pool.slice(0, 20);
+    } else {
+      pool = uniqueCardsById(fullDeck);
+    }
+  }
   let deck = shuffle(pool);
   if (deck.length < 20) {
     const fallback = shuffle(fullDeck);
