@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V67</title>
+<title>Superstar Cricket Cards — V69</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -401,13 +401,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 
 /* RESULT OVERLAY */
 #result-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);backdrop-filter:blur(6px);
-  display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:10px 10px 20px}
-.result-header{text-align:center;padding:6px 0 10px;width:100%;flex-shrink:0}
-.result-label{font-family:'Bebas Neue',cursive;font-size:38px;letter-spacing:5px;line-height:1}
+  display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:10px 10px 16px;
+  height:100svh;box-sizing:border-box}
+.result-header{text-align:center;padding:4px 0 6px;width:100%;flex-shrink:0}
+.result-label{font-family:'Bebas Neue',cursive;font-size:34px;letter-spacing:5px;line-height:1}
 .result-label.win{color:var(--green-win);text-shadow:0 0 24px rgba(184,130,57,.6)}
 .result-label.lose{color:var(--red)}
 .result-label.draw{color:var(--blue)}
-.result-stat-line{font-size:13px;color:var(--gray);margin-top:3px;letter-spacing:.5px}
+.result-stat-line{font-size:12px;color:var(--gray);margin-top:2px;letter-spacing:.5px}
 
 /* PODIUM (4-player result) */
 .podium-row{display:flex;gap:6px;width:100%;max-width:var(--card-w);justify-content:center;flex-wrap:wrap;margin:8px 0}
@@ -423,15 +424,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .podium-pts{font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:1px}
 
 /* RESULT CARDS AREA */
-.result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1}
-/* 2-player: side by side */
-.result-cards-area.two-player{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
+.result-cards-area{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center;flex:1;min-height:0}
+/* 2-player: side by side, fill available height */
+.result-cards-area.two-player{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:stretch;flex:1;min-height:0}
 .result-multi-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
-.result-card-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.result-card-wrap{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-height:0}
 .result-card-label{font-family:'Bebas Neue',cursive;font-size:10px;letter-spacing:2px;
-  width:100%;text-align:center}
+  width:100%;text-align:center;flex-shrink:0}
 .result-card-label.you{color:var(--gold)}
 .result-card-label.opp{color:var(--blue)}
+/* Avatar fills remaining height dynamically */
+.result-cards-area.two-player .card-avatar{height:auto!important;flex:1!important;min-height:min(140px,35vw)}
 
 /* RESULT FOOTER */
 .result-footer{width:100%;max-width:100%;display:flex;flex-direction:column;gap:8px;
@@ -547,17 +550,21 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   width:100%;
   flex:1 1 0;
   min-width:0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
 }
-.result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important}
-.result-cards-area.two-player .card-avatar{height:min(160px,42vw)!important;flex:none!important}
+.result-cards-area.two-player .cricket-card{width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;flex-direction:column!important;flex:1!important}
+.result-cards-area.two-player .card-avatar{height:auto!important;flex:1!important;min-height:min(140px,35vw)!important}
 .result-cards-area.two-player .card-player-name{font-size:clamp(11px,3.4vw,16px)!important}
 .result-cards-area.two-player .card-country-role{font-size:9px!important}
 .result-cards-area.two-player .rarity-badge{font-size:8px!important;padding:2px 5px!important}
-.result-cards-area.two-player .card-stats{padding:4px 5px!important}
+.result-cards-area.two-player .card-stats{padding:4px 5px!important;flex-shrink:0!important}
 .result-cards-area.two-player .stat-btn{padding:4px 6px!important;margin-bottom:1px!important}
 .result-cards-area.two-player .stat-label{font-size:10px!important}
 .result-cards-area.two-player .stat-value{font-size:11px!important;min-width:38px!important}
-.result-cards-area.two-player .card-header{padding:6px 8px 5px!important}
+.result-cards-area.two-player .card-header{padding:6px 8px 5px!important;flex-shrink:0!important}
+.result-cards-area.two-player .country-strip{flex-shrink:0!important}
 @media (max-height:720px){
   .landing-logo-img{width:min(390px,90vw);max-height:150px;margin-bottom:14px;}
 }
@@ -818,7 +825,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V67</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V69</div>
     <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
@@ -1941,8 +1948,13 @@ function startConfirmTimer(seconds, statKey) {
     updateBanner();
     if (G._confirmSecsLeft <= 0) {
       clearConfirmTimer();
-      if (G.phase === 'confirm' && !G.confirmedOnline && G.myIndex !== G.pickerIndex) {
-        confirmStat(); // auto-confirm
+      if (G.phase === 'confirm') {
+        if (G.mode === 'ai') {
+          // AI mode: auto-resolve the round
+          aiResolveRound();
+        } else if (!G.confirmedOnline && G.myIndex !== G.pickerIndex) {
+          confirmStat();
+        }
       }
     }
   }, 1000);
@@ -3666,6 +3678,8 @@ function aiRenderRound() {
   G.phase      = 'pick';
   G.chosenStat = null;
   G.ackedNext  = false;
+  clearPickTimer();
+  clearConfirmTimer();
 
   requestAnimationFrame(() => {
   document.getElementById('result-overlay').classList.add('hidden');
@@ -3679,6 +3693,14 @@ function aiRenderRound() {
     banner.className   = 'status-banner your-turn';
     renderMyCard({ clickable: true });
     renderOppFacedown();
+    startPickTimer(15, () => {
+      // Auto-pick best stat if player runs out of time
+      if (G.phase === 'pick' && G.pickerIndex === 0) {
+        const best = aiPickBestStat(G.myCard, 'all');
+        SFX.play('pick');
+        pickStat(best);
+      }
+    });
   } else {
     banner.innerHTML = `<span class="wait-dot"></span>&nbsp;&nbsp;AI is thinking…`;
     banner.className = 'status-banner wait';
@@ -3702,8 +3724,9 @@ function aiStatChosen(statKey) {
   G.phase      = 'confirm';
   G.chosenStat = statKey;
   const banner = document.getElementById('status-banner');
-  banner.textContent = `AI chose ${statLabel(statKey)} — TAP IT TO CONFIRM!`;
   banner.className   = 'status-banner confirm';
+  // Start confirm countdown — auto-confirms in 10s if player doesn't tap
+  startConfirmTimer(10, statKey);
   renderMyCard({ blink: statKey });
   renderOppFacedown();
 }
