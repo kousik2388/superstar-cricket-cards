@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Superstar Cricket Cards — V61</title>
+<title>Superstar Cricket Cards — V62</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
 <script>
 // Load socket.io — try local server first (Render), fall back to CDN (itch.io)
@@ -767,7 +767,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(14px,4vw,20px);
       color:#DAB985;letter-spacing:12px;margin-bottom:24px;">GAMES</div>
     <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.42);font-family:'Bebas Neue',cursive;">TAP TO CONTINUE</div>
-    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V61</div>
+    <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.22);font-family:'Bebas Neue',cursive;margin-top:8px;">SUPERSTAR CRICKET CARDS — V62</div>
     <div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.18);font-family:'Bebas Neue',cursive;margin-top:4px;">DEVELOPED BY KOUSIK KARTHIKEYAN</div>
   </div>
 </div>
@@ -1809,11 +1809,24 @@ function toggleMute() {
 // Default fallback avatar — served from public/avatars/default_card.png (uploaded to GitHub).
 const DEFAULT_PLAYER_AVATAR_SRC = 'avatars/default_card.png';
 
+// On itch.io the HTML is served as a standalone file with no /public/ folder alongside it.
+// Prefix avatar paths with the Render origin so images load correctly on both platforms.
+const RENDER_ORIGIN = 'https://superstar-cricket-cards.onrender.com';
+const IS_ITCH = !window.location.hostname.includes('onrender.com') &&
+                !window.location.hostname.includes('localhost') &&
+                !window.location.hostname.includes('127.0.0.1') &&
+                window.location.protocol !== 'file:';
+function avatarSrc(path) {
+  if (!path) return IS_ITCH ? RENDER_ORIGIN + '/' + DEFAULT_PLAYER_AVATAR_SRC : DEFAULT_PLAYER_AVATAR_SRC;
+  if (IS_ITCH && path.startsWith('avatars/')) return RENDER_ORIGIN + '/' + path;
+  return path;
+}
+
 // Clean fallback when an avatar image fails to load
 function avatarFallback(img) {
   if (img) {
     img.onerror = null; // prevent infinite loop
-    img.src = DEFAULT_PLAYER_AVATAR_SRC;
+    img.src = avatarSrc(DEFAULT_PLAYER_AVATAR_SRC);
     img.style.display = '';
     img.style.objectFit = 'cover';
     img.style.width = '100%';
@@ -3289,7 +3302,7 @@ function startAIGame() {
     }
     // Since dropdown only shows countries with >=10 cards, squad is always usable
   }
-  // V61: if country filter is active, always honour it — pad by repeating country cards
+  // V62: if country filter is active, always honour it — pad by repeating country cards
   // rather than silently falling back to the full deck (which caused mixed-country hands).
   let pool = uniqueCardsById(squad);
   if (pool.length < 20) {
@@ -3855,8 +3868,8 @@ function buildCard(card, { clickable=false, selected=null, blink=null, result=nu
     </div>
     <div class="card-avatar">
       ${hasUsableAvatar(card)
-        ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="avatarFallback(this)">`
-        : `<img src="${DEFAULT_PLAYER_AVATAR_SRC}" alt="${card.name}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img src="${avatarSrc(card.avatarUrl)}" alt="${card.avatarAlt||card.name}" data-initials="${initials}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="avatarFallback(this)">`
+        : `<img src="${avatarSrc(null)}" alt="${card.name}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="this.style.display='none'">`
       }
     </div>
     <div class="country-strip ${countryClass(card.country)}"></div>
@@ -3877,10 +3890,10 @@ function buildResultCard(card, { rankClass='', statKey=null, isMe=false } = {}) 
   const sc       = STAT_CONFIG.find(s => s.key === statKey);
   const val      = sc ? displayVal(card, statKey) : '—';
   const avatarHtml = hasUsableAvatar(card)
-    ? `<img src="${card.avatarUrl}" alt="${card.avatarAlt||card.name}" data-initials="${initials}"
+    ? `<img src="${avatarSrc(card.avatarUrl)}" alt="${card.avatarAlt||card.name}" data-initials="${initials}"
          style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;"
          loading="lazy" onerror="avatarFallback(this)">`
-    : `<img src="${DEFAULT_PLAYER_AVATAR_SRC}" alt="${card.name}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="this.style.display='none'">` ;
+    : `<img src="${avatarSrc(null)}" alt="${card.name}" style="width:100%;height:100%;object-fit:cover;object-position:center center;background:#0d1f14;" loading="lazy" onerror="this.style.display='none'">` ;
 
   return `<div class="cricket-card ${rc}">
     <div class="card-header">
